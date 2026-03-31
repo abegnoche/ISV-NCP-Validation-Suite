@@ -29,6 +29,8 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
+import pytest
+
 if TYPE_CHECKING:
     import paramiko
 
@@ -1501,10 +1503,8 @@ class NvlinkCheck(BaseValidation):
             # Check NVLink status per GPU
             exit_code, stdout, _ = run_ssh_command(ssh, "nvidia-smi nvlink -s 2>/dev/null")
             if exit_code != 0 or not stdout.strip():
-                # NVLink may not be available (e.g., consumer GPUs)
-                self.report_subtest("nvlink", True, "NVLink not available (OK for non-NVLink GPUs)")
-                self.set_passed(f"NVLink not available on {host} (skipped)")
                 ssh.close()
+                pytest.skip(f"NVLink not available on {host}")
                 return
 
             # Parse per-GPU NVLink status
@@ -1596,9 +1596,8 @@ class InfiniBandCheck(BaseValidation):
             # Check if ibstat is available
             exit_code, stdout, _ = run_ssh_command(ssh, "ibstat 2>/dev/null")
             if exit_code != 0 or not stdout.strip():
-                self.report_subtest("infiniband", True, "InfiniBand not available (OK if not expected)")
-                self.set_passed(f"InfiniBand not available on {host} (skipped)")
                 ssh.close()
+                pytest.skip(f"InfiniBand not available on {host}")
                 return
 
             # Parse ibstat output for CA (Channel Adapter) and port status
