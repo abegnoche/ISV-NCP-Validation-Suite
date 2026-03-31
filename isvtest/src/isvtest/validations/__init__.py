@@ -32,6 +32,7 @@ from isvtest.validations.generic import (
     SchemaValidation,
     StepSuccessCheck,
 )
+from isvtest.validations.host import CloudInitCheck
 from isvtest.validations.iam import (
     AccessKeyAuthenticatedCheck,
     AccessKeyCreatedCheck,
@@ -71,7 +72,6 @@ from isvtest.validations.nim import (
     NimInferenceCheck,
     NimModelCheck,
 )
-from isvtest.validations.ssh import CloudInitCheck
 
 __all__ = [
     "AccessKeyAuthenticatedCheck",
