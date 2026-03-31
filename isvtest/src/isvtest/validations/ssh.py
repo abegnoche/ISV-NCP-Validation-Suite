@@ -47,7 +47,7 @@ from isvtest.core.validation import BaseValidation
 # =============================================================================
 
 
-class SshConnectivityCheck(BaseValidation):
+class ConnectivityCheck(BaseValidation):
     """Test SSH connectivity to remote host.
 
     Works on any platform with SSH access.
@@ -60,7 +60,7 @@ class SshConnectivityCheck(BaseValidation):
 
     description: ClassVar[str] = "Validates SSH connectivity"
     timeout: ClassVar[int] = 120
-    markers: ClassVar[list[str]] = ["ssh"]
+    markers: ClassVar[list[str]] = ["ssh", "bare_metal", "vm"]
 
     def run(self) -> None:
         try:
@@ -125,7 +125,7 @@ class SshConnectivityCheck(BaseValidation):
 # =============================================================================
 
 
-class SshOsCheck(BaseValidation):
+class OsCheck(BaseValidation):
     """Check OS details via SSH.
 
     Works on any Linux host.
@@ -137,7 +137,7 @@ class SshOsCheck(BaseValidation):
 
     description: ClassVar[str] = "Validates OS via SSH"
     timeout: ClassVar[int] = 120
-    markers: ClassVar[list[str]] = ["ssh"]
+    markers: ClassVar[list[str]] = ["ssh", "bare_metal", "vm"]
 
     def run(self) -> None:
         try:
@@ -195,7 +195,7 @@ class SshOsCheck(BaseValidation):
             self.set_failed(f"OS check failed: {e}")
 
 
-class SshCpuInfoCheck(BaseValidation):
+class CpuInfoCheck(BaseValidation):
     """Check CPU and system configuration via SSH.
 
     Validates CPU count, NUMA topology, and PCI devices.
@@ -203,7 +203,7 @@ class SshCpuInfoCheck(BaseValidation):
 
     description: ClassVar[str] = "Validates CPU, NUMA topology, and PCI configuration"
     timeout: ClassVar[int] = 120
-    markers: ClassVar[list[str]] = ["ssh"]
+    markers: ClassVar[list[str]] = ["ssh", "bare_metal", "vm"]
 
     def run(self) -> None:
         try:
@@ -265,7 +265,7 @@ class SshCpuInfoCheck(BaseValidation):
 # =============================================================================
 
 
-class SshVcpuPinningCheck(BaseValidation):
+class VcpuPinningCheck(BaseValidation):
     """Validate vCPU pinning and NUMA affinity on the host.
 
     Checks that vCPUs are properly configured:
@@ -283,7 +283,7 @@ class SshVcpuPinningCheck(BaseValidation):
 
     description: ClassVar[str] = "Validates vCPU pinning and NUMA affinity"
     timeout: ClassVar[int] = 120
-    markers: ClassVar[list[str]] = ["ssh"]
+    markers: ClassVar[list[str]] = ["ssh", "vm"]
 
     def run(self) -> None:
         try:
@@ -413,7 +413,7 @@ class SshVcpuPinningCheck(BaseValidation):
             self.set_failed(f"vCPU pinning check failed: {e}")
 
 
-class SshPciBusCheck(BaseValidation):
+class PciBusCheck(BaseValidation):
     """Validate PCI bus configuration for GPU devices.
 
     Checks that PCI bus is properly configured:
@@ -431,7 +431,7 @@ class SshPciBusCheck(BaseValidation):
 
     description: ClassVar[str] = "Validates PCI bus configuration for GPU devices"
     timeout: ClassVar[int] = 120
-    markers: ClassVar[list[str]] = ["ssh", "gpu"]
+    markers: ClassVar[list[str]] = ["ssh", "gpu", "vm"]
 
     def run(self) -> None:
         try:
@@ -593,7 +593,7 @@ class SshPciBusCheck(BaseValidation):
 # =============================================================================
 
 
-class SshHostSoftwareCheck(BaseValidation):
+class HostSoftwareCheck(BaseValidation):
     """Validate that the correct host software stack is installed.
 
     Checks Linux kernel, libvirt/QEMU, SBIOS (System BIOS), and NVIDIA drivers
@@ -609,7 +609,7 @@ class SshHostSoftwareCheck(BaseValidation):
 
     description: ClassVar[str] = "Validates kernel, libvirt, SBIOS, and NVIDIA drivers"
     timeout: ClassVar[int] = 120
-    markers: ClassVar[list[str]] = ["ssh"]
+    markers: ClassVar[list[str]] = ["ssh", "bare_metal", "vm"]
 
     def run(self) -> None:
         try:
@@ -849,7 +849,7 @@ class SshHostSoftwareCheck(BaseValidation):
 # =============================================================================
 
 
-class SshGpuCheck(BaseValidation):
+class GpuCheck(BaseValidation):
     """Test GPU visibility via SSH.
 
     Works on any platform with SSH + nvidia-smi.
@@ -861,7 +861,7 @@ class SshGpuCheck(BaseValidation):
 
     description: ClassVar[str] = "Validates GPU via SSH"
     timeout: ClassVar[int] = 300
-    markers: ClassVar[list[str]] = ["ssh", "gpu"]
+    markers: ClassVar[list[str]] = ["ssh", "gpu", "bare_metal", "vm"]
 
     def run(self) -> None:
         try:
@@ -936,7 +936,7 @@ class SshGpuCheck(BaseValidation):
             self.set_failed(f"GPU check failed: {e}")
 
 
-class SshDriverCheck(BaseValidation):
+class DriverCheck(BaseValidation):
     """Check kernel and NVIDIA drivers via SSH.
 
     Validates driver installation and versions.
@@ -948,7 +948,7 @@ class SshDriverCheck(BaseValidation):
 
     description: ClassVar[str] = "Validates kernel and NVIDIA drivers"
     timeout: ClassVar[int] = 120
-    markers: ClassVar[list[str]] = ["ssh", "gpu"]
+    markers: ClassVar[list[str]] = ["ssh", "gpu", "bare_metal", "vm"]
 
     def run(self) -> None:
         try:
@@ -1041,7 +1041,7 @@ def _detect_ssh_container_runtime(ssh: paramiko.SSHClient) -> str:
     return "docker"
 
 
-class SshGpuStressCheck(BaseValidation):
+class GpuStressCheck(BaseValidation):
     """Run GPU stress test via SSH using PyTorch matrix multiplications.
 
     Runs the same gpu_stress_torch.py script used by Slurm/K8s workloads,
@@ -1059,7 +1059,7 @@ class SshGpuStressCheck(BaseValidation):
 
     description: ClassVar[str] = "GPU stress test via SSH"
     timeout: ClassVar[int] = 900
-    markers: ClassVar[list[str]] = ["ssh", "gpu", "workload"]
+    markers: ClassVar[list[str]] = ["ssh", "gpu", "workload", "bare_metal"]
 
     def run(self) -> None:
         try:
@@ -1161,7 +1161,7 @@ class SshGpuStressCheck(BaseValidation):
             self.set_failed(f"GPU stress failed: {e}")
 
 
-class SshNcclCheck(BaseValidation):
+class NcclCheck(BaseValidation):
     """Run single-node NCCL AllReduce test via SSH.
 
     Validates GPU-to-GPU communication (NVLink/NVSwitch) by running
@@ -1179,7 +1179,7 @@ class SshNcclCheck(BaseValidation):
 
     description: ClassVar[str] = "NCCL AllReduce test via SSH"
     timeout: ClassVar[int] = 900
-    markers: ClassVar[list[str]] = ["ssh", "gpu", "workload"]
+    markers: ClassVar[list[str]] = ["ssh", "gpu", "workload", "bare_metal"]
 
     _DEFAULT_IMAGE = "nvcr.io/nvidia/hpc-benchmarks:25.04"
 
@@ -1296,7 +1296,7 @@ class SshNcclCheck(BaseValidation):
             self.set_failed(f"NCCL test failed: {e}")
 
 
-class SshTrainingCheck(BaseValidation):
+class TrainingCheck(BaseValidation):
     """Run a DDP PyTorch training workload via SSH.
 
     Validates the full distributed training stack by running a small MLP
@@ -1321,7 +1321,7 @@ class SshTrainingCheck(BaseValidation):
 
     description: ClassVar[str] = "DDP training workload via SSH"
     timeout: ClassVar[int] = 900
-    markers: ClassVar[list[str]] = ["ssh", "gpu", "workload"]
+    markers: ClassVar[list[str]] = ["ssh", "gpu", "workload", "bare_metal"]
 
     def run(self) -> None:
         try:
@@ -1462,7 +1462,7 @@ class SshTrainingCheck(BaseValidation):
 # =============================================================================
 
 
-class SshNvlinkCheck(BaseValidation):
+class NvlinkCheck(BaseValidation):
     """Validate NVLink topology and link status via SSH.
 
     Checks that NVLink interconnects between GPUs are present and active
@@ -1475,7 +1475,7 @@ class SshNvlinkCheck(BaseValidation):
 
     description: ClassVar[str] = "NVLink topology and status via SSH"
     timeout: ClassVar[int] = 120
-    markers: ClassVar[list[str]] = ["ssh", "gpu", "network"]
+    markers: ClassVar[list[str]] = ["ssh", "gpu", "network", "bare_metal"]
 
     def run(self) -> None:
         try:
@@ -1558,7 +1558,7 @@ class SshNvlinkCheck(BaseValidation):
             self.set_failed(f"NVLink check failed: {e}")
 
 
-class SshInfiniBandCheck(BaseValidation):
+class InfiniBandCheck(BaseValidation):
     """Validate InfiniBand interfaces via SSH.
 
     Checks that IB ports are present and in Active state using ``ibstat``.
@@ -1570,7 +1570,7 @@ class SshInfiniBandCheck(BaseValidation):
 
     description: ClassVar[str] = "InfiniBand interface status via SSH"
     timeout: ClassVar[int] = 120
-    markers: ClassVar[list[str]] = ["ssh", "network"]
+    markers: ClassVar[list[str]] = ["ssh", "network", "bare_metal"]
 
     def run(self) -> None:
         try:
@@ -1653,7 +1653,7 @@ class SshInfiniBandCheck(BaseValidation):
             self.set_failed(f"InfiniBand check failed: {e}")
 
 
-class SshEthernetCheck(BaseValidation):
+class EthernetCheck(BaseValidation):
     """Validate network interfaces and connectivity via SSH.
 
     Checks that expected network interfaces are up and optionally
@@ -1667,7 +1667,7 @@ class SshEthernetCheck(BaseValidation):
 
     description: ClassVar[str] = "Ethernet interfaces and connectivity via SSH"
     timeout: ClassVar[int] = 120
-    markers: ClassVar[list[str]] = ["ssh", "network"]
+    markers: ClassVar[list[str]] = ["ssh", "network", "bare_metal"]
 
     def run(self) -> None:
         try:
@@ -1757,7 +1757,7 @@ class SshEthernetCheck(BaseValidation):
             self.set_failed(f"Ethernet check failed: {e}")
 
 
-class SshContainerRuntimeCheck(BaseValidation):
+class ContainerRuntimeCheck(BaseValidation):
     """Container runtime and NVIDIA Docker check.
 
     Checks Docker and NVIDIA container runtime are available and working.
@@ -1769,7 +1769,7 @@ class SshContainerRuntimeCheck(BaseValidation):
 
     description: ClassVar[str] = "Tests container runtime and NVIDIA Docker support"
     timeout: ClassVar[int] = 300
-    markers: ClassVar[list[str]] = ["ssh", "gpu", "workload", "slow"]
+    markers: ClassVar[list[str]] = ["ssh", "gpu", "workload", "slow", "bare_metal", "vm"]
 
     def run(self) -> None:
         try:
@@ -1836,7 +1836,7 @@ class SshContainerRuntimeCheck(BaseValidation):
 # =============================================================================
 
 
-class SshCloudInitCheck(BaseValidation):
+class CloudInitCheck(BaseValidation):
     """Validate cloud-init completed and instance metadata service is reachable.
 
     Checks two things via SSH:
@@ -1851,7 +1851,7 @@ class SshCloudInitCheck(BaseValidation):
 
     description: ClassVar[str] = "Validates cloud-init completed and metadata service is reachable"
     timeout: ClassVar[int] = 120
-    markers: ClassVar[list[str]] = ["ssh", "vm"]
+    markers: ClassVar[list[str]] = ["ssh", "vm", "bare_metal"]
 
     def run(self) -> None:
         try:

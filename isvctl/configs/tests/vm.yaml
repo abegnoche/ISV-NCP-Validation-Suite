@@ -284,23 +284,23 @@ tests:
     ssh:
       step: launch_instance
       checks:
-        SshConnectivityCheck: {}
-        SshOsCheck:
+        ConnectivityCheck: {}
+        OsCheck:
           expected_os: "ubuntu"
 
     gpu:
       step: launch_instance
       checks:
-        SshGpuCheck:
+        GpuCheck:
           expected_gpus: 1
 
     host_os:
       step: launch_instance
       checks:
-        SshVcpuPinningCheck: {}
-        SshPciBusCheck:
+        VcpuPinningCheck: {}
+        PciBusCheck:
           expected_gpus: 1
-        SshHostSoftwareCheck: {}
+        HostSoftwareCheck: {}
 
     tags:
       step: verify_tags
@@ -311,7 +311,7 @@ tests:
     cloud_init:
       step: launch_instance
       checks:
-        SshCloudInitCheck: {}
+        CloudInitCheck: {}
 
     stop_checks:
       step: stop_instance
@@ -326,14 +326,14 @@ tests:
     start_ssh:
       step: start_instance
       checks:
-        SshConnectivityCheck: {}
-        SshOsCheck:
+        ConnectivityCheck: {}
+        OsCheck:
           expected_os: "ubuntu"
 
     start_gpu:
       step: start_instance
       checks:
-        SshGpuCheck:
+        GpuCheck:
           expected_gpus: 1
 
     reboot_checks:
@@ -351,23 +351,23 @@ tests:
     reboot_ssh:
       step: reboot_instance
       checks:
-        SshConnectivityCheck: {}
-        SshOsCheck:
+        ConnectivityCheck: {}
+        OsCheck:
           expected_os: "ubuntu"
 
     reboot_gpu:
       step: reboot_instance
       checks:
-        SshGpuCheck:
+        GpuCheck:
           expected_gpus: 1
 
     reboot_host_os:
       step: reboot_instance
       checks:
-        SshVcpuPinningCheck: {}
-        SshPciBusCheck:
+        VcpuPinningCheck: {}
+        PciBusCheck:
           expected_gpus: 1
-        SshHostSoftwareCheck: {}
+        HostSoftwareCheck: {}
 
     serial_console:
       step: serial_console
@@ -377,34 +377,34 @@ tests:
     nim_health:
       step: deploy_nim
       checks:
-        SshNimHealthCheck: {}
+        NimHealthCheck: {}
 
     nim_models:
       step: deploy_nim
       checks:
-        SshNimModelCheck: {}
+        NimModelCheck: {}
 
     nim_inference:
       step: deploy_nim
       checks:
-        SshNimInferenceCheck:
+        NimInferenceCheck:
           prompt: "What is CUDA?"
           max_tokens: 50
 
     driver_info:
       step: launch_instance
       checks:
-        SshDriverCheck: {}
+        DriverCheck: {}
 
     cpu_info:
       step: launch_instance
       checks:
-        SshCpuInfoCheck: {}
+        CpuInfoCheck: {}
 
     container_runtime:
       step: launch_instance
       checks:
-        SshContainerRuntimeCheck: {}
+        ContainerRuntimeCheck: {}
 
     nim_teardown:
       step: teardown_nim

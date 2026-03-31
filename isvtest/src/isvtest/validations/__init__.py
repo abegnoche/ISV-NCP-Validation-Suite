@@ -67,11 +67,11 @@ from isvtest.validations.network import (
     VpcPeeringCheck,
 )
 from isvtest.validations.nim import (
-    SshNimHealthCheck,
-    SshNimInferenceCheck,
-    SshNimModelCheck,
+    NimHealthCheck,
+    NimInferenceCheck,
+    NimModelCheck,
 )
-from isvtest.validations.ssh import SshCloudInitCheck
+from isvtest.validations.ssh import CloudInitCheck
 
 __all__ = [
     "AccessKeyAuthenticatedCheck",
@@ -79,6 +79,7 @@ __all__ = [
     "AccessKeyDisabledCheck",
     "AccessKeyRejectedCheck",
     "ByoipCheck",
+    "CloudInitCheck",
     "ClusterHealthCheck",
     "DhcpIpManagementCheck",
     "FieldExistsCheck",
@@ -95,14 +96,13 @@ __all__ = [
     "LocalizedDnsCheck",
     "NetworkConnectivityCheck",
     "NetworkProvisionedCheck",
+    "NimHealthCheck",
+    "NimInferenceCheck",
+    "NimModelCheck",
     "NodeCountCheck",
     "PerformanceCheck",
     "SchemaValidation",
     "SecurityBlockingCheck",
-    "SshCloudInitCheck",
-    "SshNimHealthCheck",
-    "SshNimInferenceCheck",
-    "SshNimModelCheck",
     "StablePrivateIpCheck",
     "StepSuccessCheck",
     "SubnetConfigCheck",
