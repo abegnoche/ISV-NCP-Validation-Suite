@@ -88,6 +88,7 @@ class ConnectivityCheck(BaseValidation):
 
         self.log.info(f"Testing SSH to {host} as {user}")
 
+        ssh = None
         try:
             ssh = get_ssh_client(host, user, key_path)
             self.report_subtest("ssh_connect", True, f"Connected to {host}")
@@ -110,8 +111,6 @@ class ConnectivityCheck(BaseValidation):
                 uptime = float(stdout.strip())
                 self.report_subtest("uptime", True, f"{uptime:.0f}s")
 
-            ssh.close()
-
             failed = get_failed_subtests(self._subtest_results)
             if failed:
                 self.set_failed(f"SSH subtests failed: {', '.join(failed)}")
@@ -120,6 +119,12 @@ class ConnectivityCheck(BaseValidation):
 
         except Exception as e:
             self.set_failed(f"SSH failed: {e}")
+        finally:
+            if ssh is not None:
+                try:
+                    ssh.close()
+                except Exception:
+                    pass
 
 
 # =============================================================================
@@ -160,30 +165,30 @@ class OsCheck(BaseValidation):
 
         try:
             ssh = get_ssh_client(host, user, key_path)
+            try:
+                # Get OS info
+                exit_code, stdout, _ = run_ssh_command(ssh, "cat /etc/os-release")
+                if exit_code == 0:
+                    os_name = ""
+                    os_version = ""
+                    for line in stdout.split("\n"):
+                        if line.startswith("NAME="):
+                            os_name = line.split("=")[1].strip('"').lower()
+                        elif line.startswith("VERSION_ID="):
+                            os_version = line.split("=")[1].strip('"')
 
-            # Get OS info
-            exit_code, stdout, _ = run_ssh_command(ssh, "cat /etc/os-release")
-            if exit_code == 0:
-                os_name = ""
-                os_version = ""
-                for line in stdout.split("\n"):
-                    if line.startswith("NAME="):
-                        os_name = line.split("=")[1].strip('"').lower()
-                    elif line.startswith("VERSION_ID="):
-                        os_version = line.split("=")[1].strip('"')
+                    if expected_os:
+                        os_matches = expected_os in os_name
+                        self.report_subtest("os_type", os_matches, f"OS: {os_name} {os_version}")
+                    else:
+                        self.report_subtest("os_type", True, f"OS: {os_name} {os_version}")
 
-                if expected_os:
-                    os_matches = expected_os in os_name
-                    self.report_subtest("os_type", os_matches, f"OS: {os_name} {os_version}")
-                else:
-                    self.report_subtest("os_type", True, f"OS: {os_name} {os_version}")
-
-            # Get kernel
-            exit_code, stdout, _ = run_ssh_command(ssh, "uname -r")
-            if exit_code == 0:
-                self.report_subtest("kernel", True, stdout.strip())
-
-            ssh.close()
+                # Get kernel
+                exit_code, stdout, _ = run_ssh_command(ssh, "uname -r")
+                if exit_code == 0:
+                    self.report_subtest("kernel", True, stdout.strip())
+            finally:
+                ssh.close()
 
             failed = get_failed_subtests(self._subtest_results)
             if failed:
@@ -1815,8 +1820,9 @@ class ContainerRuntimeCheck(BaseValidation):
             # Check NGC login if key provided
             if ngc_api_key:
                 self.log.info("Testing NGC registry access...")
+                safe_key = ngc_api_key.replace("'", "'\\''")
                 _, stdout, _ = run_ssh_command(
-                    ssh, f"echo '{ngc_api_key}' | docker login nvcr.io -u '$oauthtoken' --password-stdin 2>&1"
+                    ssh, f"printf '%s' '{safe_key}' | docker login nvcr.io -u '$oauthtoken' --password-stdin 2>&1"
                 )
                 login_ok = "Succeeded" in stdout
                 self.report_subtest("ngc_login", login_ok, "NGC login successful" if login_ok else "NGC login failed")
