@@ -47,8 +47,8 @@ The AWS ISO/VMDK import validation tests verify:
 ┌──────────────────────────────────────────────────────────────────────────┐
 │  Validations (Platform-Agnostic)                                         │
 │  ┌──────────────────┐ ┌──────────────────┐ ┌──────────────────────────┐  │
-│  │ StepSuccessCheck │ │ CrudOperations   │ │ ConnectivityCheck     │  │
-│  │ FieldExistsCheck │ │     Check        │ │ OsCheck, GpuCheck  │  │
+│  │ StepSuccessCheck │ │ CrudOperations   │ │ ConnectivityCheck        │  │
+│  │ FieldExistsCheck │ │     Check        │ │ OsCheck, GpuCheck        │  │
 │  │ InstanceState    │ │                  │ │                          │  │
 │  │     Check        │ │                  │ │                          │  │
 │  └──────────────────┘ └──────────────────┘ └──────────────────────────┘  │
@@ -81,8 +81,8 @@ uv run isvctl test run -f isvctl/configs/providers/aws/image-registry.yaml
 │  3. launch_instance (TEST phase)                                   │
 │     Create Key Pair ─▶ Create SG ─▶ Launch from imported AMI       │
 │     Output: {instance_id, public_ip, key_path}                     │
-│     Validations: InstanceStateCheck, ConnectivityCheck,         │
-│                  OsCheck, GpuCheck                           │
+│     Validations: InstanceStateCheck, ConnectivityCheck,            │
+│                  OsCheck, GpuCheck                                 │
 └────────────────────────────────────────────────────────────────────┘
                                    │
                                    ▼
