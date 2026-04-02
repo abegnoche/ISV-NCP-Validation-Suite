@@ -9,27 +9,27 @@
 # without an express license agreement from NVIDIA CORPORATION or
 # its affiliates is strictly prohibited.
 
-# Minikube Inventory Stub - Queries local Minikube cluster
+# MicroK8s Inventory Stub - Queries local MicroK8s cluster
 #
 # Requirements:
-#   - Minikube installed and running
-#   - kubectl configured (minikube automatically configures kubeconfig)
+#   - MicroK8s installed and running
+#   - microk8s kubectl or kubectl configured
 
 set -eo pipefail
 
-if ! command -v kubectl &> /dev/null; then
-    echo "Error: kubectl not found (minikube should configure it automatically)" >&2
+# Detect kubectl command (microk8s or regular)
+if command -v microk8s &> /dev/null; then
+    KUBECTL="microk8s kubectl"
+elif command -v kubectl &> /dev/null; then
+    KUBECTL="kubectl"
+else
+    echo "Error: Neither microk8s nor kubectl found" >&2
     exit 1
 fi
 
-KUBECTL="kubectl"
-
-# Get cluster name from minikube profile or kubectl context
-if command -v minikube &> /dev/null; then
-    CLUSTER_NAME=$(minikube profile 2>/dev/null || echo "minikube")
-else
-    CLUSTER_NAME=$($KUBECTL config current-context 2>/dev/null || echo "minikube")
-fi
+CLUSTER_NAME="microk8s-$(hostname)"
+DEFAULT_GPU_NS="gpu-operator-resources"
+USE_NVIDIA_SMI_FALLBACK="true"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../common/k8s_common.sh"
+source "$SCRIPT_DIR/_common.sh"

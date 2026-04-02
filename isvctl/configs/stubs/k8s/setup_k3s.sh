@@ -37,4 +37,4 @@ CLUSTER_NAME="k3s-$(hostname)"
 USE_NVIDIA_SMI_FALLBACK="true"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../common/k8s_common.sh"
+source "$SCRIPT_DIR/_common.sh"

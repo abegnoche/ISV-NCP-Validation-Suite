@@ -26,11 +26,11 @@ commands:
     steps:
       - name: setup
         phase: setup
-        command: "../stubs/minikube/setup.sh"
+        command: "../stubs/k8s/setup_minikube.sh"
         timeout: 60
       - name: teardown
         phase: teardown
-        command: "../stubs/minikube/teardown.sh"
+        command: "../stubs/k8s/teardown_minikube.sh"
         timeout: 30
 
 tests:

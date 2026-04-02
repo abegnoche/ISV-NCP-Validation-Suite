@@ -32,4 +32,4 @@ CLUSTER_NAME=$($KUBECTL config current-context 2>/dev/null || echo "unknown")
 REQUIRE_JQ="true"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../common/k8s_common.sh"
+source "$SCRIPT_DIR/_common.sh"

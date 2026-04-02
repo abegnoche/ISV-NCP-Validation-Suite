@@ -26,11 +26,11 @@ commands:
     steps:
       - name: setup
         phase: setup
-        command: "../stubs/microk8s/setup.sh"
+        command: "../stubs/k8s/setup_microk8s.sh"
         timeout: 60
       - name: teardown
         phase: teardown
-        command: "../stubs/microk8s/teardown.sh"
+        command: "../stubs/k8s/teardown_microk8s.sh"
         timeout: 30
 
 tests:

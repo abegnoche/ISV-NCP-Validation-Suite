@@ -26,11 +26,11 @@ commands:
     steps:
       - name: setup
         phase: setup
-        command: "../stubs/k3s/setup.sh"
+        command: "../stubs/k8s/setup_k3s.sh"
         timeout: 60
       - name: teardown
         phase: teardown
-        command: "../stubs/k3s/teardown.sh"
+        command: "../stubs/k8s/teardown_k3s.sh"
         timeout: 30
 
 tests:
