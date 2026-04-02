@@ -29,6 +29,7 @@ else
 fi
 
 CLUSTER_NAME=$($KUBECTL config current-context 2>/dev/null || echo "unknown")
+DEFAULT_GPU_NS="unknown"
 REQUIRE_JQ="true"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

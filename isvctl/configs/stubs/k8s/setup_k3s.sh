@@ -18,13 +18,13 @@
 
 set -eo pipefail
 
-# Detect kubectl command
-if command -v kubectl &> /dev/null; then
-    KUBECTL="kubectl"
-elif command -v k3s &> /dev/null; then
+# Prefer k3s kubectl (reads its own kubeconfig automatically)
+if command -v k3s &> /dev/null; then
     KUBECTL="k3s kubectl"
+elif command -v kubectl &> /dev/null; then
+    KUBECTL="kubectl"
 else
-    echo "Error: Neither kubectl nor k3s found" >&2
+    echo "Error: Neither k3s nor kubectl found" >&2
     exit 1
 fi
 

@@ -64,7 +64,7 @@ tests:
           expected_per_node: "{{ steps.setup.kubernetes.gpu_per_node | default(1, true) }}"
           expected_total: "{{ steps.setup.kubernetes.total_gpus | default(1, true) }}"
         K8sDriverVersionCheck:
-          driver_version: "{{ steps.setup.kubernetes.driver_version | default('580.126.09') }}"
+          driver_version: "{{ steps.setup.kubernetes.driver_version }}"
         K8sGpuOperatorNamespaceCheck:
           namespace: "{{ steps.setup.kubernetes.gpu_operator_namespace | default('gpu-operator-resources') }}"
         K8sGpuOperatorPodsCheck:

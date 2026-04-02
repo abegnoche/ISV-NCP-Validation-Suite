@@ -20,8 +20,6 @@
 #
 # Output: prints JSON inventory to stdout
 
-set -eo pipefail
-
 DEFAULT_GPU_NS="${DEFAULT_GPU_NS:-nvidia-gpu-operator}"
 USE_NVIDIA_SMI_FALLBACK="${USE_NVIDIA_SMI_FALLBACK:-false}"
 REQUIRE_JQ="${REQUIRE_JQ:-false}"
