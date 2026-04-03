@@ -139,7 +139,7 @@ def main() -> int:
 
         if current_state != "running":
             result["error"] = f"Instance is {current_state}, expected running"
-            result["instance_state"] = current_state
+            result["state"] = current_state
             print(json.dumps(result, indent=2))
             return 1
 

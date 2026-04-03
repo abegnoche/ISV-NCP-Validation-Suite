@@ -72,7 +72,7 @@ commands:
       #     "public_ip": "<ip-address>",
       #     "key_file": "<path-to-ssh-key>",
       #     "vpc_id": "<network-id>",
-      #     "instance_state": "running",
+      #     "state": "running",
       #     "security_group_id": "<sg-id>",
       #     "key_name": "<key-pair-name>"
       #   }
@@ -201,11 +201,12 @@ commands:
       #     "success": true,
       #     "platform": "bm",
       #     "instance_id": "...",
-      #     "instance_state": "running",
+      #     "state": "running",
       #     "public_ip": "...",
       #     "key_file": "...",
+      #     "reboot_initiated": true,
       #     "uptime_seconds": <int>,
-      #     "ssh_connectivity": true
+      #     "ssh_ready": true
       #   }
       - name: reboot_instance
         phase: test
@@ -218,7 +219,7 @@ commands:
           - "--key-file"
           - "{{steps.launch_instance.key_file}}"
           - "--public-ip"
-          - "{{steps.launch_instance.public_ip}}"
+          - "{{steps.start_instance.public_ip}}"
         timeout: 1800
 
       # ─── Step 8: Power-Cycle Instance ────────────────────────────────
@@ -229,7 +230,7 @@ commands:
       #     "success": true,
       #     "platform": "bm",
       #     "instance_id": "...",
-      #     "instance_state": "running",
+      #     "state": "running",
       #     "public_ip": "54.x.x.x",
       #     "key_file": "/tmp/key.pem",
       #     "power_cycle_initiated": true,
@@ -293,7 +294,7 @@ commands:
           - "--key-file"
           - "{{steps.launch_instance.key_file}}"
           - "--public-ip"
-          - "{{steps.launch_instance.public_ip}}"
+          - "{{steps.power_cycle_instance.public_ip}}"
         timeout: 3600
 
       # ─── Step 11: Deploy NIM Container ───────────────────────────

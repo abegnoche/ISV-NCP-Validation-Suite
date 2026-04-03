@@ -73,17 +73,56 @@ def run_ssh_command(
 ) -> tuple[int, str, str]:
     """Run command via SSH and return exit_code, stdout, stderr.
 
+    Uses a threading event to enforce a wall-clock timeout, since
+    paramiko's channel timeout only applies to socket operations and
+    does not bound recv_exit_status(). Drains stdout/stderr before
+    waiting for exit status to avoid deadlocks when output exceeds
+    the channel window size.
+
     Args:
         ssh: Connected SSH client
         command: Command to execute
-        timeout: Per-command timeout in seconds (default: 120)
+        timeout: Wall-clock timeout in seconds (default: 120)
 
     Returns:
         Tuple of (exit_code, stdout, stderr)
+
+    Raises:
+        socket.timeout: If the command does not complete within timeout
     """
-    _, stdout, stderr = ssh.exec_command(command, timeout=timeout)
-    exit_code = stdout.channel.recv_exit_status()
-    return exit_code, stdout.read().decode(), stderr.read().decode()
+    import threading
+
+    _, stdout, _stderr = ssh.exec_command(command)
+    channel = stdout.channel
+
+    stdout_data: list[bytes] = []
+    stderr_data: list[bytes] = []
+
+    def _drain() -> None:
+        while not channel.exit_status_ready():
+            if channel.recv_ready():
+                stdout_data.append(channel.recv(65536))
+            if channel.recv_stderr_ready():
+                stderr_data.append(channel.recv_stderr(65536))
+        while channel.recv_ready():
+            stdout_data.append(channel.recv(65536))
+        while channel.recv_stderr_ready():
+            stderr_data.append(channel.recv_stderr(65536))
+
+    thread = threading.Thread(target=_drain, daemon=True)
+    thread.start()
+    thread.join(timeout=timeout)
+
+    if thread.is_alive():
+        channel.close()
+        raise TimeoutError("timed out")
+
+    exit_code = channel.recv_exit_status()
+    return (
+        exit_code,
+        b"".join(stdout_data).decode(),
+        b"".join(stderr_data).decode(),
+    )
 
 
 def get_ssh_config(config: dict[str, Any], inventory: dict[str, Any]) -> dict[str, Any]:

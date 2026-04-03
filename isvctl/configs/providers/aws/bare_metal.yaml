@@ -170,7 +170,7 @@ commands:
           - "--key-file"
           - "{{steps.launch_instance.key_file}}"
           - "--public-ip"
-          - "{{steps.launch_instance.public_ip}}"
+          - "{{steps.start_instance.public_ip}}"
         timeout: 1800
 
       # Power-cycle: hard power off + power on (cold start)
@@ -219,7 +219,7 @@ commands:
           - "--key-file"
           - "{{steps.launch_instance.key_file}}"
           - "--public-ip"
-          - "{{steps.launch_instance.public_ip}}"
+          - "{{steps.power_cycle_instance.public_ip}}"
         timeout: 3600
 
       # Deploy NIM container via SSH (shared script)
