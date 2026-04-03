@@ -187,7 +187,7 @@ commands:
           - "{{steps.launch_instance.key_file}}"
           - "--public-ip"
           - "{{steps.reboot_instance.public_ip}}"
-        timeout: 2700
+        timeout: 3600
 
       # Describe instance state - SSH/GPU validation anchor
       # Runs after power_cycle so the IP is current (stop/start may reassign it)

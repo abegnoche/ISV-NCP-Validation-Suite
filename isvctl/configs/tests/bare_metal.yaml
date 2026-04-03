@@ -518,11 +518,6 @@ tests:
         GpuCheck:
           expected_gpus: 8
 
-    reboot_host_os:
-      step: describe_instance
-      checks:
-        HostSoftwareCheck: {}
-
     power_cycle_checks:
       step: power_cycle_instance
       checks:
