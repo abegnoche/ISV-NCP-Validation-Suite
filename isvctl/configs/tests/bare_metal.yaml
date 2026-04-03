@@ -518,7 +518,7 @@ tests:
           expected_gpus: 8
 
     reboot_host_os:
-      step: reboot_instance
+      step: describe_instance
       checks:
         HostSoftwareCheck: {}
 
