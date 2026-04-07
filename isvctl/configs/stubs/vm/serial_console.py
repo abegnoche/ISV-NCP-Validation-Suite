@@ -34,6 +34,7 @@ Reference implementation: ../aws/vm/serial_console.py
 import argparse
 import json
 import sys
+from typing import NoReturn
 
 
 def main() -> int:
@@ -42,7 +43,7 @@ def main() -> int:
     parser.add_argument("--instance-id", required=True, help="Instance ID")
     parser.add_argument("--region", required=True, help="Cloud region")
 
-    def _arg_error(message: str) -> None:
+    def _arg_error(message: str) -> NoReturn:
         print(json.dumps({"success": False, "platform": "vm", "error": message}, indent=2))
         raise SystemExit(2)
 

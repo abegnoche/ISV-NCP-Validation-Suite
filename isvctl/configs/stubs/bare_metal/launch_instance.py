@@ -57,10 +57,17 @@ import sys
 
 
 def main() -> int:
+    """Launch a bare-metal GPU instance and emit structured JSON result."""
     parser = argparse.ArgumentParser(description="Launch bare-metal GPU instance (template)")
     parser.add_argument("--name", default="isv-bm-test-gpu", help="Instance name tag")
     parser.add_argument("--instance-type", required=True, help="Bare-metal instance type")
     parser.add_argument("--region", required=True, help="Cloud region")
+
+    def _arg_error(message: str) -> None:
+        print(json.dumps({"success": False, "platform": "bm", "error": message}, indent=2))
+        raise SystemExit(2)
+
+    parser.error = _arg_error  # type: ignore[assignment]
     args = parser.parse_args()  # noqa: F841 — used in TODO block below
 
     result: dict = {
