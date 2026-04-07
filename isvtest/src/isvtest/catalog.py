@@ -149,9 +149,11 @@ def build_catalog() -> list[dict[str, Any]]:
     """
     platform_map = _build_platform_map()
 
-    # Build class metadata lookup
+    # Build class metadata lookup, skipping classes marked for exclusion
     class_meta: dict[str, dict[str, Any]] = {}
     for cls in discover_all_tests():
+        if getattr(cls, "catalog_exclude", False):
+            continue
         markers = list(getattr(cls, "markers", []))
         class_meta[cls.__name__] = {
             "description": getattr(cls, "description", "") or "",
