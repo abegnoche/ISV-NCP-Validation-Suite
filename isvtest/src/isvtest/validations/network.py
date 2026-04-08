@@ -207,7 +207,7 @@ class SgCrudCheck(BaseValidation):
         step_output: The step output to check
 
     Step output:
-        tests: dict with create_sg, read_sg, update_sg_add_rule,
+        tests: dict with create_vpc, create_sg, read_sg, update_sg_add_rule,
                update_sg_modify_rule, update_sg_remove_rule,
                delete_sg, verify_deleted
     """

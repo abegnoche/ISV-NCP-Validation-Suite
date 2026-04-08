@@ -71,10 +71,19 @@ import sys
 
 
 def main() -> int:
+    """Run Security Group CRUD lifecycle test (template — not implemented).
+
+    Parses --region and --cidr CLI args and prints a JSON result indicating
+    the test is not yet implemented. Replace the TODO block with your
+    platform's SG CRUD logic.
+
+    Returns:
+        0 on success, 1 on failure.
+    """
     parser = argparse.ArgumentParser(description="Security Group CRUD lifecycle test (template)")
     parser.add_argument("--region", required=True, help="Cloud region")
     parser.add_argument("--cidr", default="10.95.0.0/16", help="CIDR block for test VPC")
-    args = parser.parse_args()  # noqa: F841 — used in TODO block below
+    parser.parse_args()  # parsed args used in TODO block below
 
     result: dict = {
         "success": False,
