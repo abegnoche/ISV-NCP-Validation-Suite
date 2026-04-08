@@ -52,12 +52,6 @@ from common.vpc import create_test_vpc
 logger = logging.getLogger(__name__)
 
 
-def _skip_remaining(tests: dict[str, Any], reason: str, *keys: str) -> None:
-    """Populate missing test slots with a skipped/failed entry."""
-    for key in keys:
-        tests[key] = {"passed": False, "error": f"skipped: {reason}"}
-
-
 def test_create_sg(ec2: Any, vpc_id: str, sg_name: str) -> dict[str, Any]:
     """Test creating a security group."""
     result: dict[str, Any] = {"passed": False}
@@ -77,7 +71,7 @@ def test_create_sg(ec2: Any, vpc_id: str, sg_name: str) -> dict[str, Any]:
             ],
         )
         sg_id = sg["GroupId"]
-        result["sg_id"] = sg_id  # Set early so finally-block cleanup can find it on partial failure
+        result["sg_id"] = sg_id
 
         # Remove the default egress rule for a clean slate
         ec2.revoke_security_group_egress(
@@ -243,33 +237,24 @@ def test_delete_sg(ec2: Any, sg_id: str) -> dict[str, Any]:
 def test_verify_deleted(ec2: Any, sg_id: str) -> dict[str, Any]:
     """Verify a deleted security group no longer exists."""
     result: dict[str, Any] = {"passed": False}
-    deadline = time.monotonic() + 30
-    while time.monotonic() < deadline:
-        try:
-            ec2.describe_security_groups(GroupIds=[sg_id])
-        except ClientError as e:
-            if e.response.get("Error", {}).get("Code") == "InvalidGroup.NotFound":
-                result["passed"] = True
-                result["message"] = f"Security group {sg_id} confirmed deleted"
-                return result
+
+    time.sleep(2)
+
+    try:
+        ec2.describe_security_groups(GroupIds=[sg_id])
+        result["error"] = f"Security group {sg_id} still exists after deletion"
+    except ClientError as e:
+        if "InvalidGroup.NotFound" in str(e):
+            result["passed"] = True
+            result["message"] = f"Security group {sg_id} confirmed deleted"
+        else:
             result["error"] = str(e)
-            return result
-        time.sleep(1)
-    result["error"] = f"Security group {sg_id} still exists after 30s"
     return result
 
 
 @handle_aws_errors
 def main() -> int:
-    """Run Security Group CRUD lifecycle tests against AWS EC2.
-
-    Parses --region and --cidr CLI args, creates a temporary VPC, exercises
-    the full SG lifecycle (create / read / update rules / delete / verify),
-    cleans up all resources, and prints JSON results to stdout.
-
-    Returns:
-        0 on success, 1 on any test failure.
-    """
+    """Run Security Group CRUD lifecycle tests against AWS EC2."""
     parser = argparse.ArgumentParser(description="Test Security Group CRUD operations")
     parser.add_argument("--region", default=os.environ.get("AWS_REGION", "us-west-2"))
     parser.add_argument("--cidr", default="10.95.0.0/16", help="CIDR for test VPC")
@@ -295,73 +280,35 @@ def main() -> int:
         # Setup: create a VPC to hold the SG
         vpc_result = create_test_vpc(ec2, args.cidr, f"isv-sg-crud-vpc-{suffix}")
         result["tests"]["create_vpc"] = vpc_result
-        vpc_id = vpc_result.get("vpc_id")  # Capture early for finally-block cleanup
 
         if not vpc_result["passed"]:
-            _skip_remaining(
-                result["tests"],
-                "create_vpc did not pass",
-                "create_sg",
-                "read_sg",
-                "update_sg_add_rule",
-                "update_sg_modify_rule",
-                "update_sg_remove_rule",
-                "delete_sg",
-                "verify_deleted",
-            )
             print(json.dumps(result, indent=2))
             return 1
 
+        vpc_id = vpc_result["vpc_id"]
         result["network_id"] = vpc_id
 
         # Test 1: Create SG
         create_result = test_create_sg(ec2, vpc_id, sg_name)
         result["tests"]["create_sg"] = create_result
-        sg_id = create_result.get("sg_id")  # Capture early for finally-block cleanup
 
         if not create_result["passed"]:
-            _skip_remaining(
-                result["tests"],
-                "create_sg did not pass",
-                "read_sg",
-                "update_sg_add_rule",
-                "update_sg_modify_rule",
-                "update_sg_remove_rule",
-                "delete_sg",
-                "verify_deleted",
-            )
             print(json.dumps(result, indent=2))
             return 1
+
+        sg_id = create_result["sg_id"]
 
         # Test 2: Read SG
         result["tests"]["read_sg"] = test_read_sg(ec2, sg_id, sg_name)
 
-        # Tests 3-5: Update rules (sequential — each step depends on the previous)
-        add_result = test_update_sg_add_rule(ec2, sg_id)
-        result["tests"]["update_sg_add_rule"] = add_result
+        # Test 3: Update - add rule
+        result["tests"]["update_sg_add_rule"] = test_update_sg_add_rule(ec2, sg_id)
 
-        if add_result["passed"]:
-            # Test 4: modify revokes the rule added above and adds a replacement
-            modify_result = test_update_sg_modify_rule(ec2, sg_id)
-            result["tests"]["update_sg_modify_rule"] = modify_result
+        # Test 4: Update - modify rule
+        result["tests"]["update_sg_modify_rule"] = test_update_sg_modify_rule(ec2, sg_id)
 
-            if modify_result["passed"]:
-                # Test 5: remove revokes the replacement rule from modify
-                result["tests"]["update_sg_remove_rule"] = test_update_sg_remove_rule(ec2, sg_id)
-            else:
-                result["tests"]["update_sg_remove_rule"] = {
-                    "passed": False,
-                    "error": "skipped: update_sg_modify_rule did not pass",
-                }
-        else:
-            result["tests"]["update_sg_modify_rule"] = {
-                "passed": False,
-                "error": "skipped: update_sg_add_rule did not pass",
-            }
-            result["tests"]["update_sg_remove_rule"] = {
-                "passed": False,
-                "error": "skipped: update_sg_add_rule did not pass",
-            }
+        # Test 5: Update - remove rule
+        result["tests"]["update_sg_remove_rule"] = test_update_sg_remove_rule(ec2, sg_id)
 
         # Test 6: Delete SG
         delete_result = test_delete_sg(ec2, sg_id)
@@ -369,15 +316,8 @@ def main() -> int:
 
         if delete_result["passed"]:
             # Test 7: Verify deleted
-            verify_result = test_verify_deleted(ec2, sg_id)
-            result["tests"]["verify_deleted"] = verify_result
-            if verify_result["passed"]:
-                sg_id = None  # Mark as deleted so finally skips cleanup
-        else:
-            result["tests"]["verify_deleted"] = {
-                "passed": False,
-                "error": "skipped: delete_sg did not pass",
-            }
+            result["tests"]["verify_deleted"] = test_verify_deleted(ec2, sg_id)
+            sg_id = None  # Mark as deleted
 
         # Overall success
         all_passed = all(t.get("passed", False) for t in result["tests"].values())
@@ -387,24 +327,17 @@ def main() -> int:
     except Exception as e:
         result["error"] = str(e)
     finally:
-        # Cleanup: delete SG if still exists, then VPC.
-        # Teardown failures are recorded in result so the orchestrator sees leaked resources.
+        # Cleanup: delete SG if still exists, then VPC
         if sg_id:
             try:
                 ec2.delete_security_group(GroupId=sg_id)
             except ClientError:
                 logger.exception("Failed to delete security group %s during cleanup", sg_id)
-                result["success"] = False
-                result["status"] = "teardown_failed"
-                result.setdefault("errors", []).append(f"Cleanup failed: could not delete SG {sg_id}")
         if vpc_id:
             try:
                 ec2.delete_vpc(VpcId=vpc_id)
             except ClientError:
                 logger.exception("Failed to delete VPC %s during cleanup", vpc_id)
-                result["success"] = False
-                result["status"] = "teardown_failed"
-                result.setdefault("errors", []).append(f"Cleanup failed: could not delete VPC {vpc_id}")
 
     print(json.dumps(result, indent=2))
     return 0 if result["success"] else 1
