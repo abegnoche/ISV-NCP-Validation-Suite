@@ -344,6 +344,11 @@ def main() -> int:
             # Test 7: Verify deleted
             result["tests"]["verify_deleted"] = test_verify_deleted(ec2, sg_id)
             sg_id = None  # Mark as deleted so finally skips cleanup
+        else:
+            result["tests"]["verify_deleted"] = {
+                "passed": False,
+                "error": "skipped: delete_sg did not pass",
+            }
 
         # Overall success
         all_passed = all(t.get("passed", False) for t in result["tests"].values())
