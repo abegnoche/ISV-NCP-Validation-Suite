@@ -39,6 +39,7 @@ import sys
 
 
 def main() -> int:
+    """Parse CLI args and emit bare-metal tag metadata as structured JSON."""
     parser = argparse.ArgumentParser(description="Describe bare-metal instance tags")
     parser.add_argument("--instance-id", required=True, help="Instance ID")
     parser.add_argument("--region", required=True, help="Cloud region")
