@@ -25,19 +25,20 @@
 # Steps:
 #   1. launch_instance      (setup)    - Provision bare-metal GPU instance
 #   2. list_instances       (test)     - List instances, verify target exists
-#   3. topology_placement   (test)     - Validate topology-based placement support
-#   4. serial_console       (test)     - Retrieve serial console output (read-only)
-#   5. stop_instance        (test)     - Power off node, verify stopped state
-#   6. start_instance       (test)     - Power on node, verify recovery
-#   7. reboot_instance      (test)     - Reboot instance, validate recovery
-#   8. power_cycle_instance (test)     - Hard power off + on, validate cold-start recovery
-#   9. describe_instance    (test)     - Describe current state + SSH info
+#   3. verify_tags          (test)     - Verify user-defined tags on instance
+#   4. topology_placement   (test)     - Validate topology-based placement support
+#   5. serial_console       (test)     - Retrieve serial console output (read-only)
+#   6. stop_instance        (test)     - Power off node, verify stopped state
+#   7. start_instance       (test)     - Power on node, verify recovery
+#   8. reboot_instance      (test)     - Reboot instance, validate recovery
+#   9. power_cycle_instance (test)     - Hard power off + on, validate cold-start recovery
+#  10. describe_instance    (test)     - Describe current state + SSH info
 #                                        (runs after power_cycle so IP is current)
-#  10. reinstall_instance   (test)     - Reinstall OS from stock image [skip: true by default]
-#  11. deploy_nim           (test)     - Deploy NIM container via SSH
-#  12. teardown_nim         (teardown) - Stop NIM container
-#  13. teardown             (teardown) - Terminate instance
-#  14. verify_teardown      (teardown) - Confirm resources deleted
+#  11. reinstall_instance   (test)     - Reinstall OS from stock image [skip: true by default]
+#  12. deploy_nim           (test)     - Deploy NIM container via SSH
+#  13. teardown_nim         (teardown) - Stop NIM container
+#  14. teardown             (teardown) - Terminate instance
+#  15. verify_teardown      (teardown) - Confirm resources deleted
 #
 # Dev workflow (reuse existing instance):
 #   # Run 1: launch + test, keep instance alive
@@ -102,7 +103,27 @@ commands:
           - "{{region}}"
         timeout: 120
 
-      # ─── Step 3: Topology Placement ──────────────────────────────
+      # ─── Step 3: Verify Tags ────────────────────────────────────
+      # Reuses the VM describe_tags stub (generic instance tag retrieval).
+      # YOUR SCRIPT must output JSON with at minimum:
+      #   {
+      #     "success": true,
+      #     "platform": "bm",
+      #     "instance_id": "...",
+      #     "tags": {"Name": "...", "CreatedBy": "isvtest"},
+      #     "tag_count": 2
+      #   }
+      - name: verify_tags
+        phase: test
+        command: "python3 ../stubs/bare_metal/describe_tags.py"
+        args:
+          - "--instance-id"
+          - "{{steps.launch_instance.instance_id}}"
+          - "--region"
+          - "{{region}}"
+        timeout: 60
+
+      # ─── Step 4: Topology Placement ──────────────────────────────
       # YOUR SCRIPT must validate topology-based placement support.
       #   {
       #     "success": true,
@@ -377,6 +398,12 @@ tests:
       checks:
         InstanceListCheck:
           min_count: 1
+
+    tag_checks:
+      step: verify_tags
+      checks:
+        InstanceTagCheck:
+          required_keys: ["Name", "CreatedBy"]
 
     topology_placement:
       step: topology_placement
