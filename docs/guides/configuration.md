@@ -129,15 +129,19 @@ tests:
   # Centralized validations grouped by category
   validations:
     network:
-      - NetworkProvisionedCheck:
-          step: create_network
-      - StepSuccessCheck:
-          step: test_connectivity
-          check_success: true
+      step: create_network
+      checks:
+        NetworkProvisionedCheck: {}
+
+    connectivity:
+      step: test_connectivity
+      checks:
+        StepSuccessCheck: {}
 
     teardown_checks:
-      - StepSuccessCheck:
-          step: teardown
+      step: teardown
+      checks:
+        StepSuccessCheck: {}
 ```
 
 ### Platform Configuration
@@ -190,20 +194,32 @@ Each step defines a command to execute:
 
 ### Validation Configuration
 
-Validations are centralized in `tests.validations`, grouped by category:
+Validations are centralized in `tests.validations`, grouped by category. Each group binds to a step and lists checks as a dict:
 
 ```yaml
 tests:
   validations:
-    # Category name (any meaningful name)
+    # Group name (any meaningful name)
     network:
-      - NetworkProvisionedCheck:
-          step: create_network
+      step: create_network       # Step whose JSON output is checked
+      checks:
+        NetworkProvisionedCheck: {}
 
-    # Validations can specify when to run
     teardown_checks:
-      - StepSuccessCheck:
-          step: teardown
+      step: teardown
+      checks:
+        StepSuccessCheck: {}
+```
+
+For Kubernetes/Slurm configs where validations don't bind to individual step outputs, the `step:` field is omitted:
+
+```yaml
+tests:
+  validations:
+    kubernetes:
+      checks:
+        K8sNodeCountCheck:
+          count: "{{steps.setup.kubernetes.node_count}}"
 ```
 
 **Validation Timing (`phase`):**
@@ -246,6 +262,31 @@ The part before the dash must match an existing validation class name (e.g., `K8
 - Validation class names **cannot** contain dashes, so the first dash always marks the start of a variant suffix.
 - The suffix is free-form: `K8sNimHelmWorkload-small`, `SlurmPartition-cpu`, `SlurmGpuAllocation-1gpu` are all valid.
 - Each variant is a distinct test entry in coverage tracking.
+
+## Import and Override
+
+Provider configs can import a canonical test suite and override only the commands (scripts), while inheriting all validations:
+
+```yaml
+# isvctl/configs/providers/my-isv/vm.yaml
+import: ../../tests/vm.yaml
+
+commands:
+  vm:
+    steps:
+      - name: launch_instance
+        command: "python3 ../../stubs/my-isv/vm/launch_instance.py"
+      - name: stop_instance
+        command: "python3 ../../stubs/my-isv/vm/stop_instance.py"
+      # ... override only the commands, validations stay the same
+
+tests:
+  settings:
+    region: "us-east-1"
+    instance_type: "gpu.large"
+```
+
+The import path is relative to the importing file. The imported config provides the full step list, phases, and validations. The provider config overrides specific steps and settings. See the [AWS reference implementation](../references/aws.md) for working examples.
 
 ## Template Variables
 

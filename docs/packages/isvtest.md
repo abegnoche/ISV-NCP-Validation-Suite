@@ -7,7 +7,7 @@
 > isvctl test run -f isvctl/configs/tests/k8s.yaml
 > ```
 
-A validation framework for NVIDIA ISV Lab environments supporting bare metal servers, virtual machines, Kubernetes clusters, and Slurm HPC systems.
+A validation framework for NVIDIA ISV Lab environments supporting bare-metal servers, virtual machines, Kubernetes clusters, and Slurm HPC systems.
 
 ## Quick Start
 
