@@ -301,14 +301,13 @@ class Context:
                     self._context_warnings.append(msg)
                     break
                 else:
-                    if i + 1 < len(parts):
-                        self._warned_missing_steps.add(warn_key)
-                        msg = (
-                            f"cannot descend into steps.{'.'.join(parts[: i + 1])} "
-                            f"(found {type(node).__name__}), using defaults for: steps.{full_path}"
-                        )
-                        logger.warning(msg)
-                        self._context_warnings.append(msg)
+                    self._warned_missing_steps.add(warn_key)
+                    msg = (
+                        f"cannot descend into steps.{'.'.join(parts[:i])} "
+                        f"(found {type(node).__name__}), using defaults for: steps.{full_path}"
+                    )
+                    logger.warning(msg)
+                    self._context_warnings.append(msg)
                     break
 
     def render_dict(self, data: dict[str, Any]) -> dict[str, Any]:
