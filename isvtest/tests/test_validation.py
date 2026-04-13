@@ -1192,3 +1192,105 @@ class TestValidationResultCapture:
         assert r["name"] == "FailingValidation"
         assert r["skipped"] is False
         assert r["passed"] is False
+
+
+class TestCloudInitCheckMetadataHeaders:
+    """Tests for CloudInitCheck metadata_headers parameter."""
+
+    @patch("isvtest.validations.host.get_ssh_client")
+    @patch("isvtest.validations.host.run_ssh_command")
+    @patch("isvtest.validations.host.get_ssh_config")
+    def test_no_headers_uses_default_curl(
+        self, mock_ssh_cfg: MagicMock, mock_run: MagicMock, mock_ssh: MagicMock
+    ) -> None:
+        """Without metadata_headers, curl command must not contain -H flags."""
+        from isvtest.validations.host import CloudInitCheck
+
+        mock_ssh_cfg.return_value = {"ssh_host": "10.0.0.1", "ssh_user": "ubuntu", "ssh_key_path": "/tmp/k.pem"}
+        mock_ssh.return_value = MagicMock()
+        mock_run.return_value = (0, "200", "")
+
+        captured_cmds: list[str] = []
+
+        def _capture(ssh: MagicMock, cmd: str) -> tuple[int, str, str]:
+            captured_cmds.append(cmd)
+            if "cloud-init" in cmd:
+                return (0, "status: done", "")
+            return (0, "200", "")
+
+        mock_run.side_effect = _capture
+
+        v = CloudInitCheck(config={})
+        v.execute()
+
+        curl_cmds = [c for c in captured_cmds if "curl" in c]
+        assert len(curl_cmds) == 1
+        assert "-H" not in curl_cmds[0]
+        assert "169.254.169.254" in curl_cmds[0]
+
+    @patch("isvtest.validations.host.get_ssh_client")
+    @patch("isvtest.validations.host.run_ssh_command")
+    @patch("isvtest.validations.host.get_ssh_config")
+    def test_gcp_headers_included_in_curl(
+        self, mock_ssh_cfg: MagicMock, mock_run: MagicMock, mock_ssh: MagicMock
+    ) -> None:
+        """With metadata_headers set, curl must include -H flags for each header."""
+        from isvtest.validations.host import CloudInitCheck
+
+        mock_ssh_cfg.return_value = {"ssh_host": "10.0.0.1", "ssh_user": "ubuntu", "ssh_key_path": "/tmp/k.pem"}
+        mock_ssh.return_value = MagicMock()
+
+        captured_cmds: list[str] = []
+
+        def _capture(ssh: MagicMock, cmd: str) -> tuple[int, str, str]:
+            captured_cmds.append(cmd)
+            if "cloud-init" in cmd:
+                return (0, "status: done", "")
+            return (0, "200", "")
+
+        mock_run.side_effect = _capture
+
+        v = CloudInitCheck(
+            config={
+                "metadata_url": "http://metadata.google.internal/computeMetadata/v1/",
+                "metadata_headers": {"Metadata-Flavor": "Google"},
+            }
+        )
+        v.execute()
+
+        curl_cmds = [c for c in captured_cmds if "curl" in c]
+        assert len(curl_cmds) == 1
+        assert "-H 'Metadata-Flavor: Google'" in curl_cmds[0]
+        assert "metadata.google.internal" in curl_cmds[0]
+
+    @patch("isvtest.validations.host.get_ssh_client")
+    @patch("isvtest.validations.host.run_ssh_command")
+    @patch("isvtest.validations.host.get_ssh_config")
+    def test_multiple_headers(self, mock_ssh_cfg: MagicMock, mock_run: MagicMock, mock_ssh: MagicMock) -> None:
+        """Multiple metadata_headers entries must each produce a -H flag."""
+        from isvtest.validations.host import CloudInitCheck
+
+        mock_ssh_cfg.return_value = {"ssh_host": "10.0.0.1", "ssh_user": "ubuntu", "ssh_key_path": "/tmp/k.pem"}
+        mock_ssh.return_value = MagicMock()
+
+        captured_cmds: list[str] = []
+
+        def _capture(ssh: MagicMock, cmd: str) -> tuple[int, str, str]:
+            captured_cmds.append(cmd)
+            if "cloud-init" in cmd:
+                return (0, "status: done", "")
+            return (0, "200", "")
+
+        mock_run.side_effect = _capture
+
+        v = CloudInitCheck(
+            config={
+                "metadata_headers": {"X-Custom": "value1", "X-Other": "value2"},
+            }
+        )
+        v.execute()
+
+        curl_cmds = [c for c in captured_cmds if "curl" in c]
+        assert len(curl_cmds) == 1
+        assert "-H 'X-Custom: value1'" in curl_cmds[0]
+        assert "-H 'X-Other: value2'" in curl_cmds[0]
