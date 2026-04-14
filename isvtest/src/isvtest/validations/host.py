@@ -1857,6 +1857,8 @@ class CloudInitCheck(BaseValidation):
     Config:
         host, key_file, user: SSH connection details
         metadata_url: Metadata endpoint to probe (default: http://169.254.169.254/latest/meta-data/)
+        metadata_headers: Dict of extra HTTP headers to send with the metadata
+            request (e.g. ``{"Metadata-Flavor": "Google"}`` for GCP).
     """
 
     description: ClassVar[str] = "Validates cloud-init completed and metadata service is reachable"
@@ -1875,6 +1877,7 @@ class CloudInitCheck(BaseValidation):
         user = ssh_cfg["ssh_user"]
         key_path = ssh_cfg["ssh_key_path"]
         metadata_url = self.config.get("metadata_url", "http://169.254.169.254/latest/meta-data/")
+        metadata_headers: dict[str, str] = self.config.get("metadata_headers", {})
 
         if not host or not key_path:
             self.set_failed("Missing host or key_file")
@@ -1892,7 +1895,8 @@ class CloudInitCheck(BaseValidation):
                 self.report_subtest("cloud_init", done, stdout.strip())
 
             # Check metadata service reachability
-            curl_cmd = f"curl -s -o /dev/null -w '%{{http_code}}' --max-time 5 {metadata_url}"
+            header_flags = " ".join(f"-H '{k}: {v}'" for k, v in metadata_headers.items())
+            curl_cmd = f"curl -s -o /dev/null -w '%{{http_code}}' --max-time 5 {header_flags} {metadata_url}".strip()
             exit_code, stdout, _ = run_ssh_command(ssh, curl_cmd)
             http_code = stdout.strip()
             metadata_ok = exit_code == 0 and http_code in ("200", "301")
