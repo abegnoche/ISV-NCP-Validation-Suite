@@ -103,6 +103,9 @@ class Context:
         self._warned_missing_steps: set[str] = set()
         self._context_warnings: list[str] = []
 
+        # Phases that were actually requested (set by orchestrator)
+        self._requested_phases: set[str] | None = None
+
         # Layer 6: Environment variables (for {{env.VAR}} access)
         # Must be loaded before settings so settings can reference env vars.
         # Sensitive variables (API keys, secrets) are excluded to prevent
@@ -154,6 +157,17 @@ class Context:
             >>> args: ["--cluster", "{{ steps.setup.cluster_name }}"]
         """
         self.data.setdefault("steps", {})[step_name] = output
+
+    def set_requested_phases(self, phases: set[str]) -> None:
+        """Record which phases were requested for this run.
+
+        Used to suppress warnings for steps in phases that were
+        intentionally skipped (e.g., ``--phase teardown``).
+
+        Args:
+            phases: Set of phase names that were requested
+        """
+        self._requested_phases = phases
 
     def set_step_phase(self, step_name: str, phase: str) -> None:
         """Record the phase a step belongs to.
@@ -281,6 +295,10 @@ class Context:
                 continue
 
             if step_name not in steps_data or not steps_data[step_name]:
+                # Suppress warning if the step's phase wasn't requested
+                step_phase = self._step_phases.get(step_name)
+                if self._requested_phases and step_phase and step_phase not in self._requested_phases:
+                    continue
                 self._warned_missing_steps.add(warn_key)
                 msg = f"step '{step_name}' has no output (not run?), using defaults for: steps.{full_path}"
                 logger.warning(msg)
