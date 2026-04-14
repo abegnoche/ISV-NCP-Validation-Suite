@@ -1897,7 +1897,7 @@ class CloudInitCheck(BaseValidation):
 
             # Check metadata service reachability
             header_flags = " ".join(f"-H {shlex.quote(f'{k}: {v}')}" for k, v in metadata_headers.items())
-            curl_cmd = f"curl -s -o /dev/null -w '%{{http_code}}' --max-time 5 {header_flags} {shlex.quote(metadata_url)}".strip()
+            curl_cmd = f"curl -s -o /dev/null -w '%{{http_code}}' --max-time 5 {header_flags} -- {shlex.quote(metadata_url)}".strip()
             exit_code, stdout, _ = run_ssh_command(ssh, curl_cmd)
             http_code = stdout.strip()
             metadata_ok = exit_code == 0 and http_code in ("200", "301")
