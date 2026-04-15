@@ -116,6 +116,7 @@ root volume replacement is slow on AWS metal (~30-45 min).
 | `reboot_gpu` | `GpuCheck` | reboot_instance | GPUs visible after reboot (8 GPUs) |
 | `reboot_host_os` | `HostSoftwareCheck` | reboot_instance | Host OS persisted after reboot |
 | `power_cycle_checks` | `InstancePowerCycleCheck`, `StableIdentifierCheck` | power_cycle_instance | Power-cycle recovery, instance ID stable |
+| `power_cycle_state` | `InstanceStateCheck` | power_cycle_instance | Instance running after power-cycle |
 | `power_cycle_ssh` | `ConnectivityCheck`, `OsCheck` | power_cycle_instance | SSH works after power-cycle |
 | `power_cycle_gpu` | `GpuCheck` | power_cycle_instance | GPUs visible after power-cycle |
 | `reinstall_state` | `InstanceStateCheck` | reinstall_instance | Running after reinstall (if enabled) |
