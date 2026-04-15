@@ -283,7 +283,9 @@ class Orchestrator:
 
         # Tell context which phases were requested so it can suppress
         # warnings for steps in intentionally skipped phases
-        if Phase.ALL not in requested_phases:
+        if Phase.ALL in requested_phases:
+            self.context.set_requested_phases(set(config_phases))
+        else:
             self.context.set_requested_phases(requested_phase_names)
 
         # Per-phase JUnit XML: use temp files per phase, merge at the end
