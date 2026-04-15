@@ -121,7 +121,8 @@ class SlurmPartition(BaseValidation):
         if partition_name:
             # Check for specific partition
             if partition_name not in partitions:
-                if not expected_nodes and not required_nodes:
+                no_nodes_expected = expected_nodes == 0 and not required_nodes and not min_nodes
+                if no_nodes_expected:
                     pytest.skip(
                         f"Partition '{partition_name}' not present on this cluster "
                         f"(available: {list(partitions.keys())})"
