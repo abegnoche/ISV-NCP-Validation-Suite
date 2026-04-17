@@ -28,7 +28,7 @@ Required JSON output fields:
   public_ip         (str)    - public IP address of the instance
   key_file          (str)    - path to the SSH private key file
   vpc_id            (str)    - network/VPC identifier
-  instance_state    (str)    - must be "running" on success
+  state             (str)    - must be "running" on success (read by InstanceStateCheck)
   security_group_id (str)    - security group/firewall rule identifier
   key_name          (str)    - name of the SSH key pair
   error             (str, optional) - error message provided when success is false
@@ -50,7 +50,7 @@ def main() -> int:
     parser.add_argument("--name", default="isv-test-gpu", help="Instance name tag")
     parser.add_argument("--instance-type", required=True, help="GPU instance type")
     parser.add_argument("--region", required=True, help="Cloud region")
-    args = parser.parse_args()  # noqa: F841 — used in TODO block below
+    args = parser.parse_args()
 
     result = {
         "success": False,
@@ -59,7 +59,7 @@ def main() -> int:
         "public_ip": "",
         "key_file": "",
         "vpc_id": "",
-        "instance_state": "",
+        "state": "",
         "security_group_id": "",
         "key_name": "",
     }
@@ -94,13 +94,22 @@ def main() -> int:
         # ║     result["public_ip"] = public_ip                          ║
         # ║     result["key_file"] = key_file                            ║
         # ║     result["vpc_id"] = vpc_id                                ║
-        # ║     result["instance_state"] = "running"                     ║
+        # ║     result["state"] = "running"                              ║
         # ║     result["security_group_id"] = sg_id                      ║
         # ║     result["key_name"] = key_name                            ║
         # ║     result["success"] = True                                 ║
         # ╚══════════════════════════════════════════════════════════════╝
 
-        result["error"] = "Not implemented - replace with your platform's VM launch logic"
+        result["instance_id"] = "dummy-vm-0001"
+        result["public_ip"] = "203.0.113.10"
+        result["private_ip"] = "10.0.0.10"
+        result["key_file"] = "/tmp/dummy-key.pem"
+        result["vpc_id"] = "dummy-vpc-0001"
+        result["security_group_id"] = "dummy-sg-0001"
+        result["key_name"] = args.name
+        result["instance_type"] = args.instance_type
+        result["state"] = "running"
+        result["success"] = True
 
     except Exception as e:
         result["error"] = str(e)

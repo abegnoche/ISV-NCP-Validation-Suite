@@ -58,7 +58,7 @@ commands:
       #     "public_ip": "<ip-address>",
       #     "key_file": "<path-to-ssh-key>",
       #     "vpc_id": "<network-id>",
-      #     "instance_state": "running",
+      #     "state": "running",
       #     "security_group_id": "<sg-id>",
       #     "key_name": "<key-pair-name>"
       #   }
@@ -164,11 +164,12 @@ commands:
       #     "success": true,
       #     "platform": "vm",
       #     "instance_id": "...",
-      #     "instance_state": "running",
+      #     "state": "running",
       #     "public_ip": "...",
       #     "key_file": "...",
-      #     "uptime_seconds": <int>,
-      #     "ssh_connectivity": true
+      #     "reboot_initiated": true,
+      #     "ssh_ready": true,
+      #     "uptime_seconds": <int>
       #   }
       - name: reboot_instance
         phase: test
