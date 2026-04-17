@@ -75,7 +75,11 @@ def main() -> int:
     # ║    result["success"] = True                                      ║
     # ╚══════════════════════════════════════════════════════════════════╝
 
-    result["error"] = "Not implemented - replace with your platform's user creation logic"
+    result["user_id"] = "dummy-id"
+    if args.create_access_key:
+        result["access_key_id"] = "dummy-key"
+        result["secret_access_key"] = "dummy-secret"
+    result["success"] = True
     print(json.dumps(result, indent=2))
 
     # Return 0 if success, non-zero if failure
