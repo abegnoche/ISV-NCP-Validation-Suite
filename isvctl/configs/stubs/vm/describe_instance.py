@@ -42,6 +42,7 @@ Reference implementation: ../aws/vm/describe_instance.py
 import argparse
 import json
 import sys
+from typing import Any
 
 
 def main() -> int:
@@ -52,7 +53,7 @@ def main() -> int:
     parser.add_argument("--key-file", required=True, help="Path to SSH private key")
     args = parser.parse_args()
 
-    result: dict = {
+    result: dict[str, Any] = {
         "success": False,
         "platform": "vm",
         "instance_id": args.instance_id,
