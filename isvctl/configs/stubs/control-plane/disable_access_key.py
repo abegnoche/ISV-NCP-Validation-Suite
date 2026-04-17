@@ -19,12 +19,12 @@ Required JSON output:
     "success":       bool — true if key was disabled,
     "platform":      str  — "control_plane",
     "access_key_id": str  — the key that was disabled,
-    "status":        str  — "disabled",
+    "status":        str  — "Inactive" (must match exactly; AccessKeyDisabledCheck compares case-sensitively),
     "error":         str or null — error message when disabling fails; null/absent on success
 }
 
 Usage:
-    python disable_access_key.py --username testuser --access-key-id AKID
+    python disable_access_key.py --username testuser --access-key-id AKID --region <region>
 
 AWS reference implementation:
     ../aws/control-plane/disable_access_key.py
@@ -39,6 +39,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Disable an access key")
     parser.add_argument("--username", required=True, help="User who owns the key")
     parser.add_argument("--access-key-id", required=True, help="Key to disable")
+    parser.add_argument("--region", required=True, help="Cloud region / availability zone")
     args = parser.parse_args()
 
     result: dict = {
@@ -54,7 +55,7 @@ def main() -> int:
     # ║  1. Disable / deactivate the access key                          ║
     # ║     (e.g. set status to Inactive, revoke the token)              ║
     # ║  2. On success:                                                  ║
-    # ║     → result["status"]  = "disabled"                             ║
+    # ║     → result["status"]  = "Inactive"                             ║
     # ║     → result["success"] = True                                   ║
     # ╚══════════════════════════════════════════════════════════════════╝
 

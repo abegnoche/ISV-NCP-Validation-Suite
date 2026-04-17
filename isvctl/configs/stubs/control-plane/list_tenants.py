@@ -14,13 +14,15 @@
 Provider-agnostic template — replace the TODO section with your platform's
 multi-tenancy listing calls.
 
-Required JSON output:
+Required JSON output (field names must match — TenantListedCheck reads these):
 {
-    "success":  bool             — true if listing succeeded,
-    "platform": str              — "control_plane",
-    "tenants":  list[{name, id}] — list of tenant objects,
-    "found":    bool             — true if target tenant is in the list,
-    "error":    str              — error message (present when success is false)
+    "success":       bool                               — true if listing succeeded,
+    "platform":      str                                — "control_plane",
+    "tenants":       list[{tenant_name, tenant_id}]     — list of tenant objects,
+    "count":         int                                — len(tenants),
+    "target_tenant": str                                — echoes --target-group,
+    "found_target":  bool                               — true if target is in the list,
+    "error":         str                                — error message (present when success is false)
 }
 
 Usage:
@@ -39,24 +41,27 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="List tenants / resource groups")
     parser.add_argument("--region", required=True, help="Cloud region / availability zone")
     parser.add_argument("--target-group", required=True, help="Tenant name to look for")
-    args = parser.parse_args()  # noqa: F841 — used in TODO block below
+    args = parser.parse_args()
 
     result: dict = {
         "success": False,
         "platform": "control_plane",
         "tenants": [],
-        "found": False,
+        "count": 0,
+        "target_tenant": args.target_group,
+        "found_target": False,
     }
 
-    # ╔══════════════════════════════════════════════════════════════════╗
-    # ║  TODO: Replace this block with your platform's implementation    ║
-    # ║                                                                  ║
-    # ║  1. List all tenants / resource groups / projects                ║
-    # ║     → result["tenants"] = [{"name": "...", "id": "..."}, ...]    ║
-    # ║  2. Check if args.target_group is in the list                    ║
-    # ║     → result["found"] = True / False                             ║
-    # ║  3. Set result["success"] = True                                 ║
-    # ╚══════════════════════════════════════════════════════════════════╝
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║  TODO: Replace this block with your platform's implementation           ║
+    # ║                                                                         ║
+    # ║  1. List all tenants / resource groups / projects                       ║
+    # ║     → result["tenants"] = [{"tenant_name": "...", "tenant_id": "..."}]  ║
+    # ║     → result["count"]   = len(result["tenants"])                        ║
+    # ║  2. Check if args.target_group is in the list                           ║
+    # ║     → result["found_target"] = True / False                             ║
+    # ║  3. Set result["success"] = True                                        ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
 
     result["error"] = "Not implemented - replace with your platform's tenant listing logic"
 

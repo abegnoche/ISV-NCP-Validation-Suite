@@ -34,7 +34,7 @@ On failure, set "success": false and include an "error" field:
   }
 
 Usage:
-    python create_user.py --username isv-test-user
+    python create_user.py --username isv-test-user --create-access-key
 
 Reference implementation: ../aws/iam/create_user.py
 """
@@ -47,6 +47,12 @@ import sys
 def main() -> int:
     parser = argparse.ArgumentParser(description="Create IAM user (template)")
     parser.add_argument("--username", default="isv-test-user", help="Username to create")
+    parser.add_argument(
+        "--create-access-key",
+        action="store_true",
+        default=True,
+        help="Also create credentials for the user",
+    )
     args = parser.parse_args()
 
     result: dict = {
@@ -62,8 +68,10 @@ def main() -> int:
     # ║    client = MyIamClient(api_url=os.environ["IAM_API_URL"])       ║
     # ║    user = client.create_user(username=args.username)             ║
     # ║    result["user_id"] = user.id                                   ║
-    # ║    result["access_key_id"] = user.api_key_id                     ║
-    # ║    result["secret_access_key"] = user.api_key_secret             ║
+    # ║    if args.create_access_key:                                    ║
+    # ║        key = client.create_access_key(username)                  ║
+    # ║        result["access_key_id"] = key.id                          ║
+    # ║        result["secret_access_key"] = key.secret                  ║
     # ║    result["success"] = True                                      ║
     # ╚══════════════════════════════════════════════════════════════════╝
 

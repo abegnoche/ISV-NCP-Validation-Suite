@@ -15,12 +15,12 @@ Provider-agnostic template — replace the TODO section with your platform's
 credential verification calls. This script should EXPECT authentication to
 fail; success means the key was properly rejected.
 
-Required JSON output:
+Required JSON output (field names must match — AccessKeyRejectedCheck reads these):
 {
     "success":    bool — true if the disabled key was correctly rejected,
     "platform":   str  — "control_plane",
     "rejected":   bool — true if authentication was denied,
-    "error_type": str  — category of rejection (e.g. "InvalidClientTokenId"),
+    "error_code": str  — category of rejection (e.g. "InvalidClientTokenId"),
     "error":      str  — (optional) error message, present when success is false
 }
 
@@ -47,7 +47,7 @@ def main() -> int:
         "success": False,
         "platform": "control_plane",
         "rejected": False,
-        "error_type": "",
+        "error_code": "",
     }
 
     # ╔══════════════════════════════════════════════════════════════════╗
@@ -57,7 +57,7 @@ def main() -> int:
     # ║     (args.access_key_id, args.secret_access_key)                 ║
     # ║  2. If authentication FAILS (expected):                          ║
     # ║     → result["rejected"]   = True                                ║
-    # ║     → result["error_type"] = "<rejection-error-code>"            ║
+    # ║     → result["error_code"] = "<rejection-error-code>"            ║
     # ║     → result["success"]    = True                                ║
     # ║  3. If authentication SUCCEEDS (unexpected — key not disabled):  ║
     # ║     → result["rejected"]   = False                               ║
