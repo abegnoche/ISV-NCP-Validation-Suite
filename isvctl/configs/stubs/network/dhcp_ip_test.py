@@ -101,7 +101,12 @@ def main() -> int:
     # ║  by a separate cleanup script.                                   ║
     # ╚══════════════════════════════════════════════════════════════════╝
 
-    result["error"] = "Not implemented - replace with your platform's instance launch logic"
+    result["instance_id"] = "dummy-dhcp-instance"
+    result["public_ip"] = "203.0.113.50"
+    result["private_ip"] = "10.0.1.5"
+    result["key_file"] = "/tmp/dummy-dhcp-key.pem"
+    result["key_name"] = "dummy-dhcp-key"
+    result["success"] = True
     print(json.dumps(result, indent=2))
 
     return 0 if result["success"] else 1

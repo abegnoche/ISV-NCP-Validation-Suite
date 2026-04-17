@@ -94,7 +94,25 @@ def main() -> int:
     # ║    result["success"] = True                                      ║
     # ╚══════════════════════════════════════════════════════════════════╝
 
-    result["error"] = "Not implemented - replace with your platform's connectivity test logic"
+    result["network_id"] = args.vpc_id
+    result["instances"] = [
+        {
+            "instance_id": "dummy-conn-instance-a",
+            "subnet_id": args.subnet_ids.split(",")[0],
+            "private_ip": "10.0.1.10",
+            "public_ip": "203.0.113.30",
+        },
+        {
+            "instance_id": "dummy-conn-instance-b",
+            "subnet_id": args.subnet_ids.split(",")[-1],
+            "private_ip": "10.0.2.10",
+        },
+    ]
+    result["tests"] = {
+        "instance_to_instance": {"passed": True},
+        "instance_to_internet": {"passed": True},
+    }
+    result["success"] = True
     print(json.dumps(result, indent=2))
 
     return 0 if result["success"] else 1

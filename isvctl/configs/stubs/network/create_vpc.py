@@ -88,7 +88,31 @@ def main() -> int:
     # ║    result["success"] = True                                      ║
     # ╚══════════════════════════════════════════════════════════════════╝
 
-    result["error"] = "Not implemented - replace with your platform's VPC creation logic"
+    result["network_id"] = "dummy-vpc-shared"
+    result["subnets"] = [
+        {
+            "subnet_id": "dummy-subnet-a",
+            "cidr": "10.0.1.0/24",
+            "az": f"{args.region}a",
+            "auto_assign_public_ip": True,
+            "available_ips": 251,
+        },
+        {
+            "subnet_id": "dummy-subnet-b",
+            "cidr": "10.0.2.0/24",
+            "az": f"{args.region}b",
+            "auto_assign_public_ip": False,
+            "available_ips": 251,
+        },
+    ]
+    result["security_group_id"] = "dummy-sg-shared"
+    result["dhcp_options"] = {
+        "dhcp_options_id": "dummy-dopt",
+        "domain_name": "internal.my-isv.test",
+        "domain_name_servers": ["10.0.0.2"],
+        "ntp_servers": [],
+    }
+    result["success"] = True
     print(json.dumps(result, indent=2))
 
     return 0 if result["success"] else 1
