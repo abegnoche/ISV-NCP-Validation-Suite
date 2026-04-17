@@ -20,14 +20,14 @@ This is a lightweight step that validations bind to. SSH, GPU, and host-OS
 checks run against this step's output, ensuring they execute in the test
 phase (so teardown always runs, even if tests fail).
 
-Required JSON output fields:
+Required JSON output fields (read by InstanceStateCheck and SSH-based host checks):
   {
-    "success": true,             # boolean - did the query succeed?
-    "platform": "bm",            # string  - always "bm"
-    "instance_id": "...",        # string  - instance identifier
-    "instance_state": "running", # string  - current state
-    "public_ip": "54.x.x.x",     # string  - public IP for SSH access
-    "key_file": "/tmp/key.pem"   # string  - path to SSH private key
+    "success": true,           # boolean - did the query succeed?
+    "platform": "bm",          # string  - always "bm"
+    "instance_id": "...",      # string  - instance identifier
+    "state": "running",        # string  - current state
+    "public_ip": "54.x.x.x",   # string  - public IP for SSH access
+    "key_file": "/tmp/key.pem" # string  - path to SSH private key
   }
 
 On failure, set "success": false and include an "error" field.
@@ -35,7 +35,7 @@ On failure, set "success": false and include an "error" field.
 Usage:
     python describe_instance.py --instance-id <id> --region <region> --key-file /tmp/key.pem
 
-Reference implementation: ../aws/bm/describe_instance.py
+Reference implementation: ../aws/bare_metal/describe_instance.py
 """
 
 import argparse
@@ -54,7 +54,7 @@ def main() -> int:
         "success": False,
         "platform": "bm",
         "instance_id": args.instance_id,
-        "instance_state": "",
+        "state": "",
         "public_ip": "",
         "key_file": args.key_file,
     }
@@ -66,12 +66,14 @@ def main() -> int:
     # ║    client = MyCloudClient(region=args.region)                    ║
     # ║    info = client.describe_instance(args.instance_id)             ║
     # ║                                                                  ║
-    # ║    result["instance_state"] = info.state       # "running"       ║
+    # ║    result["state"] = info.state                # "running"       ║
     # ║    result["public_ip"] = info.public_ip        # for SSH         ║
     # ║    result["success"] = True                                      ║
     # ╚══════════════════════════════════════════════════════════════════╝
 
-    result["error"] = "Not implemented - replace with your platform's instance describe logic"
+    result["state"] = "running"
+    result["public_ip"] = "203.0.113.20"
+    result["success"] = True
     print(json.dumps(result, indent=2))
     return 0 if result["success"] else 1
 

@@ -101,7 +101,13 @@ def main() -> int:
     # ║    result["message"] = "Bare-metal instance teardown completed"  ║
     # ╚══════════════════════════════════════════════════════════════════╝
 
-    result["error"] = "Not implemented - replace with your platform's instance teardown logic"
+    result["resources_deleted"].append(f"instance:{args.instance_id}")
+    if args.delete_key_pair:
+        result["resources_deleted"].append("key_pair:dummy-bm-key")
+    if args.delete_security_group:
+        result["resources_deleted"].append("security_group:dummy-sg-bm-0001")
+    result["message"] = "Bare-metal instance and associated resources deleted"
+    result["success"] = True
     print(json.dumps(result, indent=2))
     return 0 if result["success"] else 1
 

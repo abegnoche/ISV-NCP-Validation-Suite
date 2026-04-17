@@ -33,7 +33,7 @@ Required JSON output fields:
     "public_ip": "54.x.x.x",       # string  - public IP for SSH access
     "key_file": "/tmp/key.pem",    # string  - path to SSH private key
     "vpc_id": "vpc-xxx",           # string  - network/VPC identifier
-    "instance_state": "running",   # string  - must be "running"
+    "state": "running",            # string  - must be "running" (read by InstanceStateCheck)
     "security_group_id": "sg-xxx", # string  - security group / firewall ID
     "key_name": "my-key"           # string  - key pair name
   }
@@ -47,7 +47,7 @@ Usage:
     BM_INSTANCE_ID=i-xxx BM_KEY_FILE=/tmp/key.pem python launch_instance.py \
         --name isv-bm-test-gpu --instance-type <type> --region <region>
 
-Reference implementation: ../aws/bm/launch_instance.py
+Reference implementation: ../aws/bare_metal/launch_instance.py
 """
 
 import argparse
@@ -68,7 +68,7 @@ def main() -> int:
         raise SystemExit(2)
 
     parser.error = _arg_error  # type: ignore[assignment]
-    args = parser.parse_args()  # noqa: F841 — used in TODO block below
+    args = parser.parse_args()
 
     result: dict = {
         "success": False,
@@ -77,7 +77,7 @@ def main() -> int:
         "public_ip": "",
         "key_file": "",
         "vpc_id": "",
-        "instance_state": "",
+        "state": "",
         "security_group_id": "",
         "key_name": "",
     }
@@ -98,7 +98,7 @@ def main() -> int:
         # ║    result["public_ip"] = info.public_ip                      ║
         # ║    result["key_file"] = key_file                             ║
         # ║    result["vpc_id"] = info.vpc_id                            ║
-        # ║    result["instance_state"] = info.state                     ║
+        # ║    result["state"] = info.state                              ║
         # ║    result["security_group_id"] = info.security_group_id      ║
         # ║    result["key_name"] = info.key_name                        ║
         # ║    result["success"] = info.state == "running"               ║
@@ -150,11 +150,20 @@ def main() -> int:
     # ║       info = client.describe_instance(instance.id)               ║
     # ║       result["public_ip"] = info.public_ip                       ║
     # ║       result["vpc_id"] = info.vpc_id                             ║
-    # ║       result["instance_state"] = "running"                       ║
+    # ║       result["state"] = "running"                                ║
     # ║       result["success"] = True                                   ║
     # ╚══════════════════════════════════════════════════════════════════╝
 
-    result["error"] = "Not implemented - replace with your platform's instance launch logic"
+    result["instance_id"] = "dummy-bm-0001"
+    result["public_ip"] = "203.0.113.20"
+    result["private_ip"] = "10.0.0.20"
+    result["key_file"] = "/tmp/dummy-bm-key.pem"
+    result["vpc_id"] = "dummy-vpc-bm-0001"
+    result["security_group_id"] = "dummy-sg-bm-0001"
+    result["key_name"] = args.name
+    result["instance_type"] = args.instance_type
+    result["state"] = "running"
+    result["success"] = True
     print(json.dumps(result, indent=2))
     return 0 if result["success"] else 1
 
