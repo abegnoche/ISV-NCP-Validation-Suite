@@ -64,7 +64,7 @@ commands:
       #   }
       - name: launch_instance
         phase: setup
-        command: "python3 ../stubs/vm/launch_instance.py"
+        command: "python3 ../stubs/my-isv/vm/launch_instance.py"
         args:
           - "--name"
           - "isv-test-gpu"
@@ -84,7 +84,7 @@ commands:
       #   }
       - name: list_instances
         phase: test
-        command: "python3 ../stubs/vm/list_instances.py"
+        command: "python3 ../stubs/my-isv/vm/list_instances.py"
         args:
           - "--vpc-id"
           - "{{steps.launch_instance.vpc_id}}"
@@ -105,7 +105,7 @@ commands:
       #   }
       - name: verify_tags
         phase: test
-        command: "python3 ../stubs/vm/describe_tags.py"
+        command: "python3 ../stubs/my-isv/vm/describe_tags.py"
         args:
           - "--instance-id"
           - "{{steps.launch_instance.instance_id}}"
@@ -124,7 +124,7 @@ commands:
       #   }
       - name: stop_instance
         phase: test
-        command: "python3 ../stubs/vm/stop_instance.py"
+        command: "python3 ../stubs/my-isv/vm/stop_instance.py"
         args:
           - "--instance-id"
           - "{{steps.launch_instance.instance_id}}"
@@ -146,7 +146,7 @@ commands:
       #   }
       - name: start_instance
         phase: test
-        command: "python3 ../stubs/vm/start_instance.py"
+        command: "python3 ../stubs/my-isv/vm/start_instance.py"
         args:
           - "--instance-id"
           - "{{steps.launch_instance.instance_id}}"
@@ -173,7 +173,7 @@ commands:
       #   }
       - name: reboot_instance
         phase: test
-        command: "python3 ../stubs/vm/reboot_instance.py"
+        command: "python3 ../stubs/my-isv/vm/reboot_instance.py"
         args:
           - "--instance-id"
           - "{{steps.launch_instance.instance_id}}"
@@ -197,7 +197,7 @@ commands:
       #   }
       - name: serial_console
         phase: test
-        command: "python3 ../stubs/vm/serial_console.py"
+        command: "python3 ../stubs/my-isv/vm/serial_console.py"
         args:
           - "--instance-id"
           # instance_id is stable across reboots; no need to use post-reboot step output
@@ -241,7 +241,7 @@ commands:
       #   }
       - name: teardown
         phase: teardown
-        command: "python3 ../stubs/vm/teardown.py"
+        command: "python3 ../stubs/my-isv/vm/teardown.py"
         args:
           - "--instance-id"
           - "{{steps.launch_instance.instance_id}}"

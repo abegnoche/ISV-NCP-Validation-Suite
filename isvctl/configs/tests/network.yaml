@@ -65,7 +65,7 @@ commands:
       #   }
       - name: create_network
         phase: setup
-        command: "python3 ../stubs/network/create_vpc.py"
+        command: "python3 ../stubs/my-isv/network/create_vpc.py"
         args:
           - "--name"
           - "isv-shared-vpc"
@@ -80,7 +80,7 @@ commands:
       # YOUR SCRIPT must output JSON matching the vpc_crud schema.
       - name: vpc_crud
         phase: test
-        command: "python3 ../stubs/network/vpc_crud_test.py"
+        command: "python3 ../stubs/my-isv/network/vpc_crud_test.py"
         args:
           - "--region"
           - "{{region}}"
@@ -94,7 +94,7 @@ commands:
       # YOUR SCRIPT must output JSON matching the subnet_config schema.
       - name: subnet_config
         phase: test
-        command: "python3 ../stubs/network/subnet_test.py"
+        command: "python3 ../stubs/my-isv/network/subnet_test.py"
         args:
           - "--region"
           - "{{region}}"
@@ -110,7 +110,7 @@ commands:
       # YOUR SCRIPT must output JSON matching the vpc_isolation schema.
       - name: vpc_isolation
         phase: test
-        command: "python3 ../stubs/network/isolation_test.py"
+        command: "python3 ../stubs/my-isv/network/isolation_test.py"
         args:
           - "--region"
           - "{{region}}"
@@ -126,7 +126,7 @@ commands:
       # YOUR SCRIPT must output JSON matching the sg_crud schema.
       - name: sg_crud
         phase: test
-        command: "python3 ../stubs/network/sg_crud_test.py"
+        command: "python3 ../stubs/my-isv/network/sg_crud_test.py"
         args:
           - "--region"
           - "{{region}}"
@@ -140,7 +140,7 @@ commands:
       # YOUR SCRIPT must output JSON matching the security_blocking schema.
       - name: security_blocking
         phase: test
-        command: "python3 ../stubs/network/security_test.py"
+        command: "python3 ../stubs/my-isv/network/security_test.py"
         args:
           - "--region"
           - "{{region}}"
@@ -154,7 +154,7 @@ commands:
       # YOUR SCRIPT must output JSON matching the connectivity_result schema.
       - name: connectivity_test
         phase: test
-        command: "python3 ../stubs/network/test_connectivity.py"
+        command: "python3 ../stubs/my-isv/network/test_connectivity.py"
         args:
           - "--vpc-id"
           - "{{steps.create_network.network_id}}"
@@ -172,7 +172,7 @@ commands:
       # YOUR SCRIPT must output JSON matching the traffic_flow schema.
       - name: traffic_validation
         phase: test
-        command: "python3 ../stubs/network/traffic_test.py"
+        command: "python3 ../stubs/my-isv/network/traffic_test.py"
         args:
           - "--region"
           - "{{region}}"
@@ -188,7 +188,7 @@ commands:
       # domain_name_servers, domain_name).
       - name: vpc_ip_config
         phase: test
-        command: "python3 ../stubs/network/vpc_ip_config_test.py"
+        command: "python3 ../stubs/my-isv/network/vpc_ip_config_test.py"
         args:
           - "--vpc-id"
           - "{{steps.create_network.network_id}}"
@@ -204,7 +204,7 @@ commands:
       # key_file, ssh_user.
       - name: dhcp_ip_test
         phase: test
-        command: "python3 ../stubs/network/dhcp_ip_test.py"
+        command: "python3 ../stubs/my-isv/network/dhcp_ip_test.py"
         args:
           - "--vpc-id"
           - "{{steps.create_network.network_id}}"
@@ -222,7 +222,7 @@ commands:
       # YOUR SCRIPT must output JSON matching the byoip schema.
       - name: byoip_test
         phase: test
-        command: "python3 ../stubs/network/byoip_test.py"
+        command: "python3 ../stubs/my-isv/network/byoip_test.py"
         args:
           - "--region"
           - "{{region}}"
@@ -238,7 +238,7 @@ commands:
       # YOUR SCRIPT must output JSON matching the stable_ip schema.
       - name: stable_ip_test
         phase: test
-        command: "python3 ../stubs/network/stable_ip_test.py"
+        command: "python3 ../stubs/my-isv/network/stable_ip_test.py"
         args:
           - "--region"
           - "{{region}}"
@@ -252,7 +252,7 @@ commands:
       # YOUR SCRIPT must output JSON matching the floating_ip schema.
       - name: floating_ip_test
         phase: test
-        command: "python3 ../stubs/network/floating_ip_test.py"
+        command: "python3 ../stubs/my-isv/network/floating_ip_test.py"
         args:
           - "--region"
           - "{{region}}"
@@ -268,7 +268,7 @@ commands:
       # YOUR SCRIPT must output JSON matching the localized_dns schema.
       - name: dns_test
         phase: test
-        command: "python3 ../stubs/network/dns_test.py"
+        command: "python3 ../stubs/my-isv/network/dns_test.py"
         args:
           - "--region"
           - "{{region}}"
@@ -284,7 +284,7 @@ commands:
       # YOUR SCRIPT must output JSON matching the vpc_peering schema.
       - name: peering_test
         phase: test
-        command: "python3 ../stubs/network/peering_test.py"
+        command: "python3 ../stubs/my-isv/network/peering_test.py"
         args:
           - "--region"
           - "{{region}}"
@@ -305,7 +305,7 @@ commands:
       #   }
       - name: teardown
         phase: teardown
-        command: "python3 ../stubs/network/teardown.py"
+        command: "python3 ../stubs/my-isv/network/teardown.py"
         args:
           - "--vpc-id"
           - "{{steps.create_network.network_id}}"

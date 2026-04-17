@@ -11,7 +11,7 @@
 # my-isv Control Plane Validation Configuration - Living Example
 #
 # Imports validations from the provider-agnostic control-plane template and
-# wires the commands to the generic template stubs in stubs/control-plane/*.
+# wires the commands to the generic template stubs in stubs/my-isv/control-plane/*.
 # Those stubs ship with dummy-success values so this example runs end-to-end
 # without any real control-plane API.
 #
@@ -44,25 +44,25 @@ commands:
     steps:
       - name: check_api
         phase: setup
-        command: "python ../../stubs/control-plane/check_api.py"
+        command: "python ../../stubs/my-isv/control-plane/check_api.py"
         args: ["--region", "{{region}}", "--services", "{{services}}"]
         timeout: 120
 
       - name: create_access_key
         phase: setup
-        command: "python ../../stubs/control-plane/create_access_key.py"
+        command: "python ../../stubs/my-isv/control-plane/create_access_key.py"
         args: ["--region", "{{region}}"]
         timeout: 60
 
       - name: create_tenant
         phase: setup
-        command: "python ../../stubs/control-plane/create_tenant.py"
+        command: "python ../../stubs/my-isv/control-plane/create_tenant.py"
         args: ["--region", "{{region}}"]
         timeout: 60
 
       - name: test_access_key
         phase: test
-        command: "python ../../stubs/control-plane/test_access_key.py"
+        command: "python ../../stubs/my-isv/control-plane/test_access_key.py"
         args:
           - "--access-key-id"
           - "{{steps.create_access_key.access_key_id}}"
@@ -75,7 +75,7 @@ commands:
 
       - name: disable_access_key
         phase: test
-        command: "python ../../stubs/control-plane/disable_access_key.py"
+        command: "python ../../stubs/my-isv/control-plane/disable_access_key.py"
         args:
           - "--username"
           - "{{steps.create_access_key.username}}"
@@ -87,7 +87,7 @@ commands:
 
       - name: verify_key_rejected
         phase: test
-        command: "python ../../stubs/control-plane/verify_key_rejected.py"
+        command: "python ../../stubs/my-isv/control-plane/verify_key_rejected.py"
         args:
           - "--access-key-id"
           - "{{steps.create_access_key.access_key_id}}"
@@ -100,7 +100,7 @@ commands:
 
       - name: list_tenants
         phase: test
-        command: "python ../../stubs/control-plane/list_tenants.py"
+        command: "python ../../stubs/my-isv/control-plane/list_tenants.py"
         args:
           - "--region"
           - "{{region}}"
@@ -110,7 +110,7 @@ commands:
 
       - name: get_tenant
         phase: test
-        command: "python ../../stubs/control-plane/get_tenant.py"
+        command: "python ../../stubs/my-isv/control-plane/get_tenant.py"
         args:
           - "--group-name"
           - "{{steps.create_tenant.tenant_name}}"
@@ -120,7 +120,7 @@ commands:
 
       - name: delete_access_key
         phase: teardown
-        command: "python ../../stubs/control-plane/delete_access_key.py"
+        command: "python ../../stubs/my-isv/control-plane/delete_access_key.py"
         args:
           - "--username"
           - "{{steps.create_access_key.username}}"
@@ -131,7 +131,7 @@ commands:
 
       - name: delete_tenant
         phase: teardown
-        command: "python ../../stubs/control-plane/delete_tenant.py"
+        command: "python ../../stubs/my-isv/control-plane/delete_tenant.py"
         args:
           - "--group-name"
           - "{{steps.create_tenant.tenant_name}}"

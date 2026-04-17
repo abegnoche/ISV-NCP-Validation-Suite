@@ -11,7 +11,7 @@
 # my-isv Network Validation Configuration - Living Example
 #
 # Imports validations from the provider-agnostic network template and wires
-# the commands to the generic template stubs in stubs/network/*. Those
+# the commands to the generic template stubs in stubs/my-isv/network/*. Those
 # stubs ship with dummy-success values so this example runs end-to-end
 # without any real cloud network infrastructure.
 #
@@ -40,7 +40,7 @@ commands:
     steps:
       - name: create_network
         phase: setup
-        command: "python ../../stubs/network/create_vpc.py"
+        command: "python ../../stubs/my-isv/network/create_vpc.py"
         args:
           - "--name"
           - "isv-shared-vpc"
@@ -52,14 +52,14 @@ commands:
 
       - name: vpc_crud
         phase: test
-        command: "python ../../stubs/network/vpc_crud_test.py"
+        command: "python ../../stubs/my-isv/network/vpc_crud_test.py"
         args: ["--region", "{{region}}", "--cidr", "10.99.0.0/16"]
         timeout: 60
         output_schema: vpc_crud
 
       - name: subnet_config
         phase: test
-        command: "python ../../stubs/network/subnet_test.py"
+        command: "python ../../stubs/my-isv/network/subnet_test.py"
         args:
           - "--region"
           - "{{region}}"
@@ -72,7 +72,7 @@ commands:
 
       - name: vpc_isolation
         phase: test
-        command: "python ../../stubs/network/isolation_test.py"
+        command: "python ../../stubs/my-isv/network/isolation_test.py"
         args:
           - "--region"
           - "{{region}}"
@@ -85,21 +85,21 @@ commands:
 
       - name: sg_crud
         phase: test
-        command: "python ../../stubs/network/sg_crud_test.py"
+        command: "python ../../stubs/my-isv/network/sg_crud_test.py"
         args: ["--region", "{{region}}", "--cidr", "10.95.0.0/16"]
         timeout: 60
         output_schema: sg_crud
 
       - name: security_blocking
         phase: test
-        command: "python ../../stubs/network/security_test.py"
+        command: "python ../../stubs/my-isv/network/security_test.py"
         args: ["--region", "{{region}}", "--cidr", "10.94.0.0/16"]
         timeout: 60
         output_schema: security_blocking
 
       - name: connectivity_test
         phase: test
-        command: "python ../../stubs/network/test_connectivity.py"
+        command: "python ../../stubs/my-isv/network/test_connectivity.py"
         args:
           - "--vpc-id"
           - "{{steps.create_network.network_id}}"
@@ -114,14 +114,14 @@ commands:
 
       - name: traffic_validation
         phase: test
-        command: "python ../../stubs/network/traffic_test.py"
+        command: "python ../../stubs/my-isv/network/traffic_test.py"
         args: ["--region", "{{region}}", "--cidr", "10.93.0.0/16"]
         timeout: 60
         output_schema: traffic_flow
 
       - name: vpc_ip_config
         phase: test
-        command: "python ../../stubs/network/vpc_ip_config_test.py"
+        command: "python ../../stubs/my-isv/network/vpc_ip_config_test.py"
         args:
           - "--vpc-id"
           - "{{steps.create_network.network_id}}"
@@ -136,7 +136,7 @@ commands:
       - name: dhcp_ip_test
         phase: test
         skip: true
-        command: "python ../../stubs/network/dhcp_ip_test.py"
+        command: "python ../../stubs/my-isv/network/dhcp_ip_test.py"
         args:
           - "--vpc-id"
           - "{{steps.create_network.network_id}}"
@@ -151,7 +151,7 @@ commands:
 
       - name: byoip_test
         phase: test
-        command: "python ../../stubs/network/byoip_test.py"
+        command: "python ../../stubs/my-isv/network/byoip_test.py"
         args:
           - "--region"
           - "{{region}}"
@@ -164,14 +164,14 @@ commands:
 
       - name: stable_ip_test
         phase: test
-        command: "python ../../stubs/network/stable_ip_test.py"
+        command: "python ../../stubs/my-isv/network/stable_ip_test.py"
         args: ["--region", "{{region}}", "--cidr", "10.91.0.0/16"]
         timeout: 60
         output_schema: stable_ip
 
       - name: floating_ip_test
         phase: test
-        command: "python ../../stubs/network/floating_ip_test.py"
+        command: "python ../../stubs/my-isv/network/floating_ip_test.py"
         args:
           - "--region"
           - "{{region}}"
@@ -184,7 +184,7 @@ commands:
 
       - name: dns_test
         phase: test
-        command: "python ../../stubs/network/dns_test.py"
+        command: "python ../../stubs/my-isv/network/dns_test.py"
         args:
           - "--region"
           - "{{region}}"
@@ -197,7 +197,7 @@ commands:
 
       - name: peering_test
         phase: test
-        command: "python ../../stubs/network/peering_test.py"
+        command: "python ../../stubs/my-isv/network/peering_test.py"
         args:
           - "--region"
           - "{{region}}"
@@ -210,7 +210,7 @@ commands:
 
       - name: teardown
         phase: teardown
-        command: "python ../../stubs/network/teardown.py"
+        command: "python ../../stubs/my-isv/network/teardown.py"
         args:
           - "--vpc-id"
           - "{{steps.create_network.network_id}}"

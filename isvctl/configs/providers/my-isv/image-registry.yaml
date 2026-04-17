@@ -12,7 +12,7 @@
 #
 # Imports validations from the provider-agnostic image-registry template
 # and wires the commands to the generic template stubs in
-# stubs/image-registry/*. Those stubs ship with dummy-success values so
+# stubs/my-isv/image-registry/*. Those stubs ship with dummy-success values so
 # this example runs end-to-end without any real cloud / BMaaS.
 #
 # Coverage:
@@ -45,7 +45,7 @@ commands:
     steps:
       - name: upload_image
         phase: setup
-        command: "python ../../stubs/image-registry/upload_image.py"
+        command: "python ../../stubs/my-isv/image-registry/upload_image.py"
         args:
           - "--image-url"
           - "{{image_url}}"
@@ -57,7 +57,7 @@ commands:
 
       - name: crud_image
         phase: test
-        command: "python ../../stubs/image-registry/crud_image.py"
+        command: "python ../../stubs/my-isv/image-registry/crud_image.py"
         args:
           - "--image-id"
           - "{{steps.upload_image.image_id}}"
@@ -67,7 +67,7 @@ commands:
 
       - name: launch_instance
         phase: test
-        command: "python ../../stubs/image-registry/launch_instance.py"
+        command: "python ../../stubs/my-isv/image-registry/launch_instance.py"
         args:
           - "--image-id"
           - "{{steps.upload_image.image_id}}"
@@ -79,13 +79,13 @@ commands:
 
       - name: crud_install_config
         phase: test
-        command: "python ../../stubs/image-registry/crud_install_config.py"
+        command: "python ../../stubs/my-isv/image-registry/crud_install_config.py"
         args: ["--region", "{{region}}"]
         timeout: 60
 
       - name: install_image_bm
         phase: test
-        command: "python ../../stubs/image-registry/install_image_bm.py"
+        command: "python ../../stubs/my-isv/image-registry/install_image_bm.py"
         args:
           - "--image-id"
           - "{{steps.upload_image.image_id}}"
@@ -95,7 +95,7 @@ commands:
 
       - name: install_config_bm
         phase: test
-        command: "python ../../stubs/image-registry/install_config_bm.py"
+        command: "python ../../stubs/my-isv/image-registry/install_config_bm.py"
         args:
           - "--config-id"
           - "{{steps.crud_install_config.config_id}}"
@@ -105,7 +105,7 @@ commands:
 
       - name: teardown
         phase: teardown
-        command: "python ../../stubs/image-registry/teardown.py"
+        command: "python ../../stubs/my-isv/image-registry/teardown.py"
         args:
           - "--instance-id"
           - "{{steps.launch_instance.instance_id}}"
