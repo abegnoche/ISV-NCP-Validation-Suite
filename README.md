@@ -56,19 +56,13 @@ Running phases: ['setup', 'test', 'teardown']
 
 ## Adding your own platform
 
-Start from the **[my-isv scaffold](isvctl/configs/stubs/my-isv/README.md)** --
-copy-and-fill-in stubs covering every validation domain (IAM, control-plane,
-VM, bare metal, network, image registry, k8s, Slurm), with a demo-mode
-fallback so you can preview the whole pipeline before writing any code:
+See the **[my-isv scaffold](isvctl/configs/stubs/my-isv/README.md)** --
+copy-and-fill-in stubs with a demo-mode fallback. Preview the whole pipeline
+before writing any code:
 
 ```bash
-make demo-test   # runs all 6 my-isv configs end-to-end, no cloud, ~10s
+make demo-test
 ```
-
-Then copy the scaffold to your platform's name, implement each `TODO:` block,
-and run without the demo flag. The [scaffold README](isvctl/configs/stubs/my-isv/README.md)
-has the full walkthrough; the [AWS reference](docs/references/aws.md) is a
-working implementation of every stub.
 
 ## Documentation
 

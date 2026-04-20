@@ -8,18 +8,17 @@ them and supply *how* (platform-specific scripts).
 - **New to the framework?** See the [External Validation Guide](../../../docs/guides/external-validation-guide.md).
 - **Try it without cloud credentials:** `make demo-test`.
 
-## Available Test Suites
-
-| Test Suite | Domain | Stubs | AWS Reference |
-|------------|--------|-------|---------------|
-| [`iam.yaml`](iam.yaml) | User lifecycle (create -> verify -> delete) | [`stubs/my-isv/iam/`](../stubs/my-isv/iam/) (3 scripts) | [`providers/aws/iam.yaml`](../providers/aws/iam.yaml) |
-| [`network.yaml`](network.yaml) | VPC CRUD, subnets, isolation, SG CRUD, security, connectivity, traffic, DDI, SDN | [`stubs/my-isv/network/`](../stubs/my-isv/network/) (16 scripts) | [`providers/aws/network.yaml`](../providers/aws/network.yaml) |
-| [`vm.yaml`](vm.yaml) | GPU VM lifecycle: launch -> tags -> stop/start -> reboot -> describe -> NIM -> teardown | [`stubs/my-isv/vm/`](../stubs/my-isv/vm/) (9 scripts) | [`providers/aws/vm.yaml`](../providers/aws/vm.yaml) |
-| [`bare_metal.yaml`](bare_metal.yaml) | BMaaS lifecycle: launch -> tags -> topology -> serial -> stop/start -> reboot -> power-cycle -> NIM -> teardown | [`stubs/my-isv/bare_metal/`](../stubs/my-isv/bare_metal/) (12 scripts) | [`providers/aws/bare_metal.yaml`](../providers/aws/bare_metal.yaml) |
-| [`k8s.yaml`](k8s.yaml) | Kubernetes GPU cluster: nodes, GPU operator, scheduling, workloads | [`stubs/my-isv/k8s/`](../stubs/my-isv/k8s/) (9 shell: generic + k3s/microk8s/minikube variants) | [`providers/aws/eks.yaml`](../providers/aws/eks.yaml) |
-| [`slurm.yaml`](slurm.yaml) | Slurm HPC cluster: partitions, jobs, GPU allocation | [`stubs/my-isv/slurm/`](../stubs/my-isv/slurm/) (2 shell) | -- |
-| [`control-plane.yaml`](control-plane.yaml) | API health, access key lifecycle, tenant lifecycle | [`stubs/my-isv/control-plane/`](../stubs/my-isv/control-plane/) (10 scripts) | [`providers/aws/control-plane.yaml`](../providers/aws/control-plane.yaml) |
-| [`image-registry.yaml`](image-registry.yaml) | Image upload, CRUD, VM launch, install config, BMaaS provisioning | [`stubs/my-isv/image-registry/`](../stubs/my-isv/image-registry/) (7 scripts) | [`providers/aws/image-registry.yaml`](../providers/aws/image-registry.yaml) |
+Suites:
+[`iam`](iam.yaml),
+[`network`](network.yaml),
+[`vm`](vm.yaml),
+[`bare_metal`](bare_metal.yaml),
+[`k8s`](k8s.yaml),
+[`slurm`](slurm.yaml),
+[`control-plane`](control-plane.yaml),
+[`image-registry`](image-registry.yaml).
+For the domain / stub-count / AWS-reference overview see the
+[my-isv scaffold README](../stubs/my-isv/README.md#domains).
 
 ## Test Suite Details
 

@@ -19,9 +19,9 @@ providers/my-isv/*.yaml    ← wiring     (which stubs implement each step)
 stubs/my-isv/<domain>/*.py ← scaffold   (copy these; fill in TODO blocks)
 ```
 
-The `tests/` layer is the NVIDIA-owned validation contract. You never change
-it. You copy the `stubs/my-isv/` and `providers/my-isv/` trees, rename them to
-your platform, and implement the TODOs.
+The `tests/` layer is the validation contract -- you never modify it, you
+`import:` it from your provider config. You copy the `stubs/my-isv/` and
+`providers/my-isv/` trees, rename them to your platform, and fill in the TODOs.
 
 ## Domains
 
