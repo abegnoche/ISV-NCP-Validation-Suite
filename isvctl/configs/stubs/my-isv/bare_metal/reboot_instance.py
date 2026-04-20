@@ -71,6 +71,7 @@ def main() -> int:
         "reboot_initiated": False,
         "ssh_ready": False,
         "uptime_seconds": None,
+        "reboot_confirmed": None,
     }
 
     # ╔══════════════════════════════════════════════════════════════════╗
