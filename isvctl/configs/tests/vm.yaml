@@ -23,15 +23,19 @@
 #   fields, the validations pass regardless of which cloud you use.
 #
 # Steps:
-#   1. launch_instance  (setup)    - Provision GPU VM, output IP/key
-#   2. list_instances   (test)     - List instances, verify target exists
-#   3. verify_tags      (test)     - Verify user-defined tags on instance
-#   4. stop_instance    (test)     - Stop VM, verify stopped state
-#   5. start_instance   (test)     - Start stopped VM, verify recovery
-#   6. reboot_instance  (test)     - Reboot VM, validate recovery
-#   7. deploy_nim       (test)     - Deploy NIM container via SSH
-#   8. teardown_nim     (teardown) - Stop NIM container via SSH
-#   9. teardown         (teardown) - Terminate VM and cleanup
+#   1. launch_instance    (setup)    - Provision GPU VM, output IP/key
+#   2. list_instances     (test)     - List instances, verify target exists
+#   3. verify_tags        (test)     - Verify user-defined tags on instance
+#   4. serial_console     (test)     - Retrieve serial console output (read-only)
+#   5. stop_instance      (test)     - Stop VM, verify stopped state
+#   6. start_instance     (test)     - Start stopped VM, verify recovery
+#   7. reboot_instance    (test)     - Reboot VM, validate recovery
+#   8. describe_instance  (test)     - Describe current state + SSH info
+#                                      (runs after reboot; host-level validations
+#                                       anchor here to prove lifecycle survival)
+#   9. deploy_nim         (test)     - Deploy NIM container via SSH
+#  10. teardown_nim       (teardown) - Stop NIM container via SSH
+#  11. teardown           (teardown) - Terminate VM and cleanup
 #
 # Quick start (new provider):
 #   1. Create your provider folder: mkdir -p isvctl/configs/providers/my-isv/
@@ -58,7 +62,7 @@ commands:
       #     "public_ip": "<ip-address>",
       #     "key_file": "<path-to-ssh-key>",
       #     "vpc_id": "<network-id>",
-      #     "instance_state": "running",
+      #     "state": "running",
       #     "security_group_id": "<sg-id>",
       #     "key_name": "<key-pair-name>"
       #   }
@@ -113,7 +117,28 @@ commands:
           - "{{region}}"
         timeout: 60
 
-      # ─── Step 4: Stop Instance ────────────────────────────────────
+      # ─── Step 4: Serial Console Access ──────────────────────────────
+      # Read-only; doesn't depend on lifecycle ops, so runs before them.
+      # YOUR SCRIPT must output JSON with at minimum:
+      #   {
+      #     "success": true,
+      #     "platform": "vm",
+      #     "instance_id": "<id>",
+      #     "console_available": true,
+      #     "serial_access_enabled": true,
+      #     "output_length": 4096
+      #   }
+      - name: serial_console
+        phase: test
+        command: "python3 ../stubs/vm/serial_console.py"
+        args:
+          - "--instance-id"
+          - "{{steps.launch_instance.instance_id}}"
+          - "--region"
+          - "{{region}}"
+        timeout: 60
+
+      # ─── Step 5: Stop Instance ────────────────────────────────────
       # YOUR SCRIPT must output JSON with at minimum:
       #   {
       #     "success": true,
@@ -132,7 +157,7 @@ commands:
           - "{{region}}"
         timeout: 600
 
-      # ─── Step 5: Start Instance ───────────────────────────────────
+      # ─── Step 6: Start Instance ───────────────────────────────────
       # YOUR SCRIPT must output JSON with at minimum:
       #   {
       #     "success": true,
@@ -158,13 +183,13 @@ commands:
           - "{{steps.launch_instance.public_ip}}"
         timeout: 300
 
-      # ─── Step 6: Reboot Instance ──────────────────────────────────
+      # ─── Step 7: Reboot Instance ──────────────────────────────────
       # YOUR SCRIPT must output JSON with at minimum:
       #   {
       #     "success": true,
       #     "platform": "vm",
       #     "instance_id": "...",
-      #     "instance_state": "running",
+      #     "state": "running",
       #     "public_ip": "...",
       #     "key_file": "...",
       #     "uptime_seconds": <int>,
@@ -181,31 +206,36 @@ commands:
           - "--key-file"
           - "{{steps.launch_instance.key_file}}"
           - "--public-ip"
-          - "{{steps.launch_instance.public_ip}}"
+          - "{{steps.start_instance.public_ip}}"
         timeout: 600
 
-      # ─── Step 7: Serial Console Access ──────────────────────────────
+      # ─── Step 8: Describe Instance ─────────────────────────────────
+      # Runs AFTER reboot so the IP is current (stop/start may reassign).
+      # This step is the SSH/GPU/host validation anchor: host-level checks
+      # bind to describe_instance so they prove the host survived the full
+      # stop/start/reboot lifecycle (driver, Docker, pinning, etc.).
       # YOUR SCRIPT must output JSON with at minimum:
       #   {
       #     "success": true,
       #     "platform": "vm",
-      #     "instance_id": "<id>",
-      #     "console_available": true,
-      #     "serial_access_enabled": true,
-      #     "output_length": 4096
+      #     "instance_id": "...",
+      #     "state": "running",
+      #     "public_ip": "...",
+      #     "key_file": "..."
       #   }
-      - name: serial_console
+      - name: describe_instance
         phase: test
-        command: "python3 ../stubs/vm/serial_console.py"
+        command: "python3 ../stubs/vm/describe_instance.py"
         args:
           - "--instance-id"
-          # instance_id is stable across reboots; no need to use post-reboot step output
           - "{{steps.launch_instance.instance_id}}"
           - "--region"
           - "{{region}}"
-        timeout: 60
+          - "--key-file"
+          - "{{steps.launch_instance.key_file}}"
+        timeout: 120
 
-      # ─── Step 8: Deploy NIM Container ─────────────────────────────
+      # ─── Step 9: Deploy NIM Container ─────────────────────────────
       # Uses post-reboot IP/key since reboot may reassign the public IP.
       # See stubs/common/deploy_nim.py for the JSON contract.
       - name: deploy_nim
@@ -218,7 +248,7 @@ commands:
           - "{{steps.reboot_instance.key_file}}"
         timeout: 1800
 
-      # ─── Step 9: Teardown NIM ─────────────────────────────────────
+      # ─── Step 10: Teardown NIM ────────────────────────────────────
       # Uses post-reboot IP/key to match what deploy_nim used.
       - name: teardown_nim
         phase: teardown
@@ -230,7 +260,7 @@ commands:
           - "{{steps.reboot_instance.key_file}}"
         timeout: 120
 
-      # ─── Step 10: Teardown Instance ───────────────────────────────
+      # ─── Step 11: Teardown Instance ───────────────────────────────
       # YOUR SCRIPT must output JSON with at minimum:
       #   {
       #     "success": true,
@@ -264,6 +294,12 @@ tests:
 
   # ─── Validations ─────────────────────────────────────────────────
   # These are PROVIDER-AGNOSTIC. They only check JSON field names/values.
+  #
+  # Layout mirrors bare_metal.yaml:
+  #   launch checks -> list -> tags -> serial_console -> cloud_init
+  #   -> describe_instance (SSH / GPU / host anchor, post-reboot)
+  #   -> lifecycle (stop / start / reboot)
+  #   -> NIM -> teardown
   validations:
     setup_checks:
       step: launch_instance
@@ -282,38 +318,68 @@ tests:
         InstanceListCheck:
           min_count: 1
 
-    ssh:
-      step: launch_instance
-      checks:
-        ConnectivityCheck: {}
-        OsCheck:
-          expected_os: "ubuntu"
-
-    gpu:
-      step: launch_instance
-      checks:
-        GpuCheck:
-          expected_gpus: 1
-
-    host_os:
-      step: launch_instance
-      checks:
-        VcpuPinningCheck: {}
-        PciBusCheck:
-          expected_gpus: 1
-        HostSoftwareCheck: {}
-
-    tags:
+    tag_checks:
       step: verify_tags
       checks:
         InstanceTagCheck:
           required_keys: ["Name", "CreatedBy"]
+
+    serial_console:
+      step: serial_console
+      checks:
+        SerialConsoleCheck: {}
 
     cloud_init:
       step: launch_instance
       checks:
         CloudInitCheck: {}
 
+    # ─── Host-level validations anchored to describe_instance ────────
+    # describe_instance runs AFTER reboot, so these checks prove the
+    # host and its software survived the full stop/start/reboot lifecycle.
+    instance_info:
+      step: describe_instance
+      checks:
+        InstanceStateCheck:
+          expected_state: "running"
+
+    ssh:
+      step: describe_instance
+      checks:
+        ConnectivityCheck: {}
+        OsCheck:
+          expected_os: "ubuntu"
+
+    gpu:
+      step: describe_instance
+      checks:
+        GpuCheck:
+          expected_gpus: 1
+
+    host_os:
+      step: describe_instance
+      checks:
+        VcpuPinningCheck: {}
+        PciBusCheck:
+          expected_gpus: 1
+        HostSoftwareCheck: {}
+
+    driver_info:
+      step: describe_instance
+      checks:
+        DriverCheck: {}
+
+    cpu_info:
+      step: describe_instance
+      checks:
+        CpuInfoCheck: {}
+
+    container_runtime:
+      step: describe_instance
+      checks:
+        ContainerRuntimeCheck: {}
+
+    # ─── Lifecycle validations ───────────────────────────────────────
     stop_checks:
       step: stop_instance
       checks:
@@ -366,19 +432,7 @@ tests:
         GpuCheck:
           expected_gpus: 1
 
-    reboot_host_os:
-      step: reboot_instance
-      checks:
-        VcpuPinningCheck: {}
-        PciBusCheck:
-          expected_gpus: 1
-        HostSoftwareCheck: {}
-
-    serial_console:
-      step: serial_console
-      checks:
-        SerialConsoleCheck: {}
-
+    # ─── NIM validations ─────────────────────────────────────────────
     nim_health:
       step: deploy_nim
       checks:
@@ -396,21 +450,7 @@ tests:
           prompt: "What is CUDA?"
           max_tokens: 50
 
-    driver_info:
-      step: launch_instance
-      checks:
-        DriverCheck: {}
-
-    cpu_info:
-      step: launch_instance
-      checks:
-        CpuInfoCheck: {}
-
-    container_runtime:
-      step: launch_instance
-      checks:
-        ContainerRuntimeCheck: {}
-
+    # ─── Teardown validations ────────────────────────────────────────
     nim_teardown:
       step: teardown_nim
       checks:

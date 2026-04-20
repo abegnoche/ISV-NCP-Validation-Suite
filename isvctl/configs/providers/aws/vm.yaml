@@ -14,14 +14,18 @@
 # This file only provides AWS-specific commands (boto3 stubs) and settings.
 #
 # Steps:
-#   1. launch_instance - boto3: Provisions EC2, outputs IP/key (setup)
-#   2. list_instances - boto3: Lists instances in VPC (test)
-#   3. stop_instance - boto3: Stops EC2, verifies stopped state (test)
-#   4. start_instance - boto3: Starts stopped EC2, verifies recovery (test)
-#   5. reboot_instance - boto3: Reboots EC2, validates recovery (test)
-#   6. deploy_nim - paramiko: Deploys NIM container via SSH (test)
-#   5. teardown_nim - paramiko: Stops NIM container via SSH (teardown)
-#   6. teardown - boto3: Terminates EC2 (teardown)
+#   1. launch_instance    - boto3: Provisions EC2, outputs IP/key (setup)
+#   2. list_instances     - boto3: Lists instances in VPC (test)
+#   3. verify_tags        - boto3: Verifies user-defined tags (test)
+#   4. serial_console     - boto3: Retrieves serial console output (test)
+#   5. stop_instance      - boto3: Stops EC2, verifies stopped state (test)
+#   6. start_instance     - boto3: Starts stopped EC2, verifies recovery (test)
+#   7. reboot_instance    - boto3: Reboots EC2, validates recovery (test)
+#   8. describe_instance  - boto3: Describes current state, passes SSH info (test)
+#                           (runs after reboot so IP is current; validation anchor)
+#   9. deploy_nim         - paramiko: Deploys NIM container via SSH (test)
+#  10. teardown_nim       - paramiko: Stops NIM container via SSH (teardown)
+#  11. teardown           - boto3: Terminates EC2 (teardown)
 #
 # Usage:
 #   uv run isvctl test run -f isvctl/configs/providers/aws/vm.yaml
@@ -72,6 +76,18 @@ commands:
           - "{{region}}"
         timeout: 60
 
+      # AWS-specific: Serial console output (boto3)
+      # Read-only - run before lifecycle ops
+      - name: serial_console
+        phase: test
+        command: "python3 ../../stubs/aws/vm/serial_console.py"
+        args:
+          - "--instance-id"
+          - "{{steps.launch_instance.instance_id}}"
+          - "--region"
+          - "{{region}}"
+        timeout: 60
+
       # AWS-specific: Stop instance and verify stopped state (boto3)
       - name: stop_instance
         phase: test
@@ -110,19 +126,23 @@ commands:
           - "--key-file"
           - "{{steps.launch_instance.key_file}}"
           - "--public-ip"
-          - "{{steps.launch_instance.public_ip}}"
+          - "{{steps.start_instance.public_ip}}"
         timeout: 600
 
-      # AWS-specific: Serial console output (boto3)
-      - name: serial_console
+      # AWS-specific: Describe instance state - SSH/GPU validation anchor (boto3)
+      # Runs after reboot so the IP is current (stop/start may reassign it).
+      # Host-level checks bind to this step so they validate the post-reboot host.
+      - name: describe_instance
         phase: test
-        command: "python3 ../../stubs/aws/vm/serial_console.py"
+        command: "python3 ../../stubs/aws/vm/describe_instance.py"
         args:
           - "--instance-id"
           - "{{steps.launch_instance.instance_id}}"
           - "--region"
           - "{{region}}"
-        timeout: 60
+          - "--key-file"
+          - "{{steps.launch_instance.key_file}}"
+        timeout: 120
 
       # Shared: Deploy NIM container via SSH (paramiko)
       # Uses post-reboot IP/key since reboot may reassign the public IP
