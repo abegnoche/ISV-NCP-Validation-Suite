@@ -62,9 +62,7 @@ def main() -> int:
 
     if DEMO_MODE:
         result["resources_deleted"].append(f"tenant:{args.group_name}")
-
         result["message"] = "Tenant deleted"
-
         result["success"] = True
 
     else:

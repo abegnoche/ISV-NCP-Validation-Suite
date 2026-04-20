@@ -63,9 +63,7 @@ def main() -> int:
 
     if DEMO_MODE:
         result["tenant_name"] = "dummy-tenant"
-
         result["tenant_id"] = "dummy-tenant-id"
-
         result["success"] = True
 
     else:

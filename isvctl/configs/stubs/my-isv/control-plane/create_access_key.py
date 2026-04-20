@@ -66,11 +66,8 @@ def main() -> int:
 
     if DEMO_MODE:
         result["username"] = "isv-test-user"
-
         result["access_key_id"] = "dummy-key-id"
-
         result["secret_access_key"] = "dummy-secret"
-
         result["success"] = True
 
     else:

@@ -70,9 +70,7 @@ def main() -> int:
 
     if DEMO_MODE:
         result["authenticated"] = True
-
         result["account_id"] = "dummy-account-123"
-
         result["success"] = True
 
     else:

@@ -80,9 +80,7 @@ def main() -> int:
 
         for service in _services:
             result["tests"][service] = {"passed": True}
-
         result["tests"]["auth"] = {"passed": True}
-
         result["success"] = True
 
     else:

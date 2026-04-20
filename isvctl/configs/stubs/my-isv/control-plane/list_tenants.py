@@ -69,11 +69,8 @@ def main() -> int:
 
     if DEMO_MODE:
         result["tenants"] = [{"tenant_name": args.target_group, "tenant_id": "dummy-tenant-id"}]
-
         result["count"] = len(result["tenants"])
-
         result["found_target"] = True
-
         result["success"] = True
 
     else:

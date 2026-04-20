@@ -115,9 +115,7 @@ def main() -> int:
 
         if args.instance_profile:
             result["resources_deleted"].append(f"profile:{args.instance_profile}")
-
         result["message"] = "Image-registry resources deleted"
-
         result["success"] = True
 
     else:

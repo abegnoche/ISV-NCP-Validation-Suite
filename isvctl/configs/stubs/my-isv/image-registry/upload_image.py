@@ -76,11 +76,8 @@ def main() -> int:
 
     if DEMO_MODE:
         result["image_id"] = "dummy-image-0001"
-
         result["storage_bucket"] = "dummy-image-bucket"
-
         result["disk_ids"] = ["dummy-disk-0001"]
-
         result["success"] = True
 
     else:

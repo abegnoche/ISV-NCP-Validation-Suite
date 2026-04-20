@@ -96,9 +96,7 @@ def main() -> int:
 
     if DEMO_MODE:
         result["config_id"] = "dummy-config-0001"
-
         result["config_name"] = "dummy-install-config"
-
         result["operations"] = {
             "create": {"passed": True},
             "read": {"passed": True},

@@ -70,9 +70,7 @@ def main() -> int:
 
     if DEMO_MODE:
         result["rejected"] = True
-
         result["error_code"] = "DummyTokenRejected"
-
         result["success"] = True
 
     else:
