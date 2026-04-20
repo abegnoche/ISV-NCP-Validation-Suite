@@ -86,7 +86,7 @@ def main() -> int:
     # ║    # Terminate instances in the VPC                              ║
     # ║    instances = client.list_instances(vpc_id=args.vpc_id)         ║
     # ║    for instance in instances:                                    ║
-    # ║        client.terminate_instance(instance.id)                   ║
+    # ║        client.terminate_instance(instance.id)                    ║
     # ║        result["resources_deleted"].append(                       ║
     # ║            f"instance:{instance.id}")                            ║
     # ║    if instances:                                                 ║

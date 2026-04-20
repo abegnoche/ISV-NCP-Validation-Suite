@@ -58,8 +58,8 @@ def main() -> int:
     # ║  TODO: Replace this block with your platform's implementation    ║
     # ║                                                                  ║
     # ║  1. Create a tenant / resource group / project                   ║
-    # ║     -> result["tenant_name"] = "<tenant-name>"                    ║
-    # ║     -> result["tenant_id"]   = "<tenant-id>"                      ║
+    # ║     -> result["tenant_name"] = "<tenant-name>"                   ║
+    # ║     -> result["tenant_id"]   = "<tenant-id>"                     ║
     # ║  2. Set result["success"] = True                                 ║
     # ╚══════════════════════════════════════════════════════════════════╝
 

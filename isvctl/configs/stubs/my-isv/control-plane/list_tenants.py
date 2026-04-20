@@ -59,14 +59,14 @@ def main() -> int:
     }
 
     # ╔══════════════════════════════════════════════════════════════════════════╗
-    # ║  TODO: Replace this block with your platform's implementation           ║
-    # ║                                                                         ║
-    # ║  1. List all tenants / resource groups / projects                       ║
+    # ║  TODO: Replace this block with your platform's implementation            ║
+    # ║                                                                          ║
+    # ║  1. List all tenants / resource groups / projects                        ║
     # ║     -> result["tenants"] = [{"tenant_name": "...", "tenant_id": "..."}]  ║
     # ║     -> result["count"]   = len(result["tenants"])                        ║
-    # ║  2. Check if args.group_name is in the list                             ║
+    # ║  2. Check if args.group_name is in the list                              ║
     # ║     -> result["found_target"] = True / False                             ║
-    # ║  3. Set result["success"] = True                                        ║
+    # ║  3. Set result["success"] = True                                         ║
     # ╚══════════════════════════════════════════════════════════════════════════╝
 
     if DEMO_MODE:

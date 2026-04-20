@@ -69,18 +69,18 @@ def main() -> int:
     # ║  TODO: Replace this block with your platform's implementation    ║
     # ║                                                                  ║
     # ║  1. Create an SSH key pair                                       ║
-    # ║     -> result["key_name"] = "<key-pair-name>"                     ║
-    # ║     -> result["key_path"] = "<path-to-private-key>"               ║
+    # ║     -> result["key_name"] = "<key-pair-name>"                    ║
+    # ║     -> result["key_path"] = "<path-to-private-key>"              ║
     # ║  2. Create a security group / firewall rule (allow SSH)          ║
-    # ║     -> result["security_group_id"] = "<sg-id>"                    ║
+    # ║     -> result["security_group_id"] = "<sg-id>"                   ║
     # ║  3. (Optional) Create an instance profile / service account      ║
-    # ║     -> result["instance_profile"] = "<profile-name>"              ║
+    # ║     -> result["instance_profile"] = "<profile-name>"             ║
     # ║  4. Launch GPU instance from the imported image                  ║
-    # ║     -> result["instance_id"] = "<instance-id>"                    ║
+    # ║     -> result["instance_id"] = "<instance-id>"                   ║
     # ║  5. Wait for the instance to reach "running" state               ║
-    # ║     -> result["state"] = "running"                                ║
+    # ║     -> result["state"] = "running"                               ║
     # ║  6. Get the public IP                                            ║
-    # ║     -> result["public_ip"] = "<ip-address>"                       ║
+    # ║     -> result["public_ip"] = "<ip-address>"                      ║
     # ║  7. Set result["success"] = True                                 ║
     # ╚══════════════════════════════════════════════════════════════════╝
 

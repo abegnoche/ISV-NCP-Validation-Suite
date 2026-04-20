@@ -59,10 +59,10 @@ def main() -> int:
     # ║  TODO: Replace this block with your platform's implementation    ║
     # ║                                                                  ║
     # ║  1. Create a test user / service account                         ║
-    # ║     -> result["username"] = "<created-username>"                  ║
+    # ║     -> result["username"] = "<created-username>"                 ║
     # ║  2. Generate an access key or API token for the user             ║
-    # ║     -> result["access_key_id"]     = "<key-id>"                   ║
-    # ║     -> result["secret_access_key"] = "<secret>"                   ║
+    # ║     -> result["access_key_id"]     = "<key-id>"                  ║
+    # ║     -> result["secret_access_key"] = "<secret>"                  ║
     # ║  3. Set result["success"] = True                                 ║
     # ╚══════════════════════════════════════════════════════════════════╝
 

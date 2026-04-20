@@ -60,9 +60,9 @@ def main() -> int:
     # ║  TODO: Replace this block with your platform's implementation    ║
     # ║                                                                  ║
     # ║  1. Fetch details for the tenant named args.group_name           ║
-    # ║     -> result["tenant_name"] = "<name>"                           ║
-    # ║     -> result["tenant_id"]   = "<id>"                             ║
-    # ║     -> result["description"] = "<description or metadata>"        ║
+    # ║     -> result["tenant_name"] = "<name>"                          ║
+    # ║     -> result["tenant_id"]   = "<id>"                            ║
+    # ║     -> result["description"] = "<description or metadata>"       ║
     # ║  2. Set result["success"] = True                                 ║
     # ╚══════════════════════════════════════════════════════════════════╝
 

@@ -56,18 +56,18 @@ def main() -> int:
     }
 
     # ╔════════════════════════════════════════════════════════════════════════════╗
-    # ║  TODO: Replace this block with your platform's implementation             ║
-    # ║                                                                           ║
-    # ║  Available arguments:                                                     ║
-    # ║    args.username        - user who owns the key                           ║
-    # ║    args.access_key_id   - key to delete                                   ║
-    # ║    args.region          - cloud region                                    ║
-    # ║                                                                           ║
-    # ║  1. Delete the access key / API token                                     ║
+    # ║  TODO: Replace this block with your platform's implementation              ║
+    # ║                                                                            ║
+    # ║  Available arguments:                                                      ║
+    # ║    args.username        - user who owns the key                            ║
+    # ║    args.access_key_id   - key to delete                                    ║
+    # ║    args.region          - cloud region                                     ║
+    # ║                                                                            ║
+    # ║  1. Delete the access key / API token                                      ║
     # ║     -> result["resources_deleted"].append(f"access_key:{...access_key_id}")║
-    # ║  2. Delete the test user / service account                                ║
+    # ║  2. Delete the test user / service account                                 ║
     # ║     -> result["resources_deleted"].append(f"user:{args.username}")         ║
-    # ║  3. Set result["message"] and result["success"] = True                    ║
+    # ║  3. Set result["message"] and result["success"] = True                     ║
     # ╚════════════════════════════════════════════════════════════════════════════╝
 
     if DEMO_MODE:

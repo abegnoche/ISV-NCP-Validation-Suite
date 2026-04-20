@@ -88,8 +88,8 @@ def main() -> int:
     # ║    result["cidr"] = vpc.cidr_block                               ║
     # ║                                                                  ║
     # ║    # Describe DHCP options                                       ║
-    # ║    dhcp = client.describe_dhcp_options(vpc.dhcp_options_id)       ║
-    # ║    result["dhcp_options"] = {                                     ║
+    # ║    dhcp = client.describe_dhcp_options(vpc.dhcp_options_id)      ║
+    # ║    result["dhcp_options"] = {                                    ║
     # ║        "dhcp_options_id": dhcp.id,                               ║
     # ║        "domain_name": dhcp.domain_name,                          ║
     # ║        "domain_name_servers": dhcp.dns_servers,                  ║

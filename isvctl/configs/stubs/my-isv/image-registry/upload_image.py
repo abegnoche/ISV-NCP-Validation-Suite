@@ -67,12 +67,12 @@ def main() -> int:
     # ║                                                                  ║
     # ║  1. Download the image from args.image_url                       ║
     # ║  2. Upload to cloud storage (object store, bucket, container)    ║
-    # ║     -> result["storage_bucket"] = "<bucket-name>"                 ║
+    # ║     -> result["storage_bucket"] = "<bucket-name>"                ║
     # ║  3. Import as a machine image (AMI, Glance image, etc.)          ║
-    # ║     -> result["image_id"] = "<imported-image-id>"                 ║
+    # ║     -> result["image_id"] = "<imported-image-id>"                ║
     # ║  4. Wait for import to complete                                  ║
     # ║  5. Record any snapshots or disks created                        ║
-    # ║     -> result["disk_ids"] = ["<snapshot-or-disk-id>", ...]        ║
+    # ║     -> result["disk_ids"] = ["<snapshot-or-disk-id>", ...]       ║
     # ║  6. Set result["success"] = True                                 ║
     # ╚══════════════════════════════════════════════════════════════════╝
 

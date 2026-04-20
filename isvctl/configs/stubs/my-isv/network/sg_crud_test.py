@@ -124,16 +124,16 @@ def main() -> int:
     # ║    result["tests"]["read_sg"]["name"] = info.name                ║
     # ║                                                                  ║
     # ║    # UPDATE - add rule                                           ║
-    # ║    client.authorize_ingress(sg.id, port=443, cidr="0.0.0.0/0")  ║
+    # ║    client.authorize_ingress(sg.id, port=443, cidr="0.0.0.0/0")   ║
     # ║    result["tests"]["update_sg_add_rule"]["passed"] = True        ║
     # ║                                                                  ║
     # ║    # UPDATE - modify (replace with different port)               ║
-    # ║    client.revoke_ingress(sg.id, port=443, cidr="0.0.0.0/0")     ║
-    # ║    client.authorize_ingress(sg.id, port=8443, cidr="0.0.0.0/0") ║
+    # ║    client.revoke_ingress(sg.id, port=443, cidr="0.0.0.0/0")      ║
+    # ║    client.authorize_ingress(sg.id, port=8443, cidr="0.0.0.0/0")  ║
     # ║    result["tests"]["update_sg_modify_rule"]["passed"] = True     ║
     # ║                                                                  ║
     # ║    # UPDATE - remove rule                                        ║
-    # ║    client.revoke_ingress(sg.id, port=8443, cidr="0.0.0.0/0")    ║
+    # ║    client.revoke_ingress(sg.id, port=8443, cidr="0.0.0.0/0")     ║
     # ║    rules = client.describe_sg_rules(sg.id)                       ║
     # ║    assert len(rules.inbound) == 0                                ║
     # ║    result["tests"]["update_sg_remove_rule"]["passed"] = True     ║

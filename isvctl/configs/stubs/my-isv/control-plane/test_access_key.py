@@ -62,12 +62,12 @@ def main() -> int:
     # ║     (args.access_key_id, args.secret_access_key)                 ║
     # ║  2. Call a "get identity" / "whoami" endpoint                    ║
     # ║  3. On success:                                                  ║
-    # ║     -> result["authenticated"] = True                             ║
-    # ║     -> result["account_id"]    = "<returned-account-id>"          ║
-    # ║     -> result["success"]       = True                             ║
+    # ║     -> result["authenticated"] = True                            ║
+    # ║     -> result["account_id"]    = "<returned-account-id>"         ║
+    # ║     -> result["success"]       = True                            ║
     # ║  4. On failure:                                                  ║
-    # ║     -> result["authenticated"] = False                            ║
-    # ║     -> result["error"]         = "<error-message>"                ║
+    # ║     -> result["authenticated"] = False                           ║
+    # ║     -> result["error"]         = "<error-message>"               ║
     # ╚══════════════════════════════════════════════════════════════════╝
 
     if DEMO_MODE:

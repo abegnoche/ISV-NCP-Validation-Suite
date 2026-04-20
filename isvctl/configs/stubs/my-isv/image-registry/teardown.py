@@ -80,19 +80,19 @@ def main() -> int:
     # ║  Delete each resource, appending to resources_deleted:           ║
     # ║                                                                  ║
     # ║  1. Terminate the instance (args.instance_id)                    ║
-    # ║     -> result["resources_deleted"].append("instance:<id>")        ║
+    # ║     -> result["resources_deleted"].append("instance:<id>)        ║
     # ║  2. Deregister / delete the machine image (args.image_id)        ║
-    # ║     -> result["resources_deleted"].append("image:<id>")           ║
+    # ║     -> result["resources_deleted"].append("image:<id>")          ║
     # ║  3. Delete disks (disk_ids)                                      ║
-    # ║     -> result["resources_deleted"].append("snapshot:<id>")        ║
+    # ║     -> result["resources_deleted"].append("snapshot:<id>")       ║
     # ║  4. Delete the storage bucket (args.bucket_name)                 ║
-    # ║     -> result["resources_deleted"].append("bucket:<name>")        ║
+    # ║     -> result["resources_deleted"].append("bucket:<name>")       ║
     # ║  5. Delete the key pair (args.key_name)                          ║
-    # ║     -> result["resources_deleted"].append("keypair:<name>")       ║
+    # ║     -> result["resources_deleted"].append("keypair:<name>")      ║
     # ║  6. Delete the security group (args.security_group_id)           ║
-    # ║     -> result["resources_deleted"].append("sg:<id>")              ║
+    # ║     -> result["resources_deleted"].append("sg:<id>")             ║
     # ║  7. Delete the instance profile (args.instance_profile)          ║
-    # ║     -> result["resources_deleted"].append("profile:<name>")       ║
+    # ║     -> result["resources_deleted"].append("profile:<name>")      ║
     # ║  8. Set result["message"] and result["success"] = True           ║
     # ╚══════════════════════════════════════════════════════════════════╝
 

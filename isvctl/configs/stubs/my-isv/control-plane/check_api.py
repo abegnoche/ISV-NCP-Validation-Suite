@@ -69,7 +69,7 @@ def main() -> int:
     # ║                                                                  ║
     # ║  1. Authenticate to your cloud API (SDK client, token, etc.)     ║
     # ║  2. Retrieve the caller identity / account ID                    ║
-    # ║     -> result["account_id"] = "<your-account-id>"                 ║
+    # ║     -> result["account_id"] = "<your-account-id>"                ║
     # ║  3. For each service in `services`:                              ║
     # ║     a. Call a lightweight read-only endpoint                     ║
     # ║     b. Record the result:                                        ║

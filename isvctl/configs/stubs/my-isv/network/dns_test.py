@@ -84,7 +84,7 @@ def main() -> int:
     # ║    result["tests"]["create_dns_record"] = {                      ║
     # ║        "passed": True, "fqdn": fqdn}                             ║
     # ║    settings = client.get_vpc_dns_settings(vpc.id)                ║
-    # ║    assert settings.dns_support and settings.dns_hostnames         ║
+    # ║    assert settings.dns_support and settings.dns_hostnames        ║
     # ║    result["tests"]["verify_dns_settings"] = {"passed": True}     ║
     # ║    resolved = client.resolve_dns(fqdn, vpc.id)                   ║
     # ║    result["tests"]["resolve_record"] = {                         ║

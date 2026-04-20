@@ -62,8 +62,8 @@ def main() -> int:
     # ║  1. Disable / deactivate the access key                          ║
     # ║     (e.g. set status to Inactive, revoke the token)              ║
     # ║  2. On success:                                                  ║
-    # ║     -> result["status"]  = "Inactive"                             ║
-    # ║     -> result["success"] = True                                   ║
+    # ║     -> result["status"]  = "Inactive"                            ║
+    # ║     -> result["success"] = True                                  ║
     # ╚══════════════════════════════════════════════════════════════════╝
 
     if DEMO_MODE:

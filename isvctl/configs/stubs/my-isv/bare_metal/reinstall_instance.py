@@ -87,7 +87,7 @@ def main() -> int:
 
     try:
         # ╔══════════════════════════════════════════════════════════════════╗
-        # ║  TODO: Replace this block with your platform's reinstall logic  ║
+        # ║  TODO: Replace this block with your platform's reinstall logic   ║
         # ║                                                                  ║
         # ║  Example (pseudocode):                                           ║
         # ║    client = MyCloudClient(region=args.region)                    ║
