@@ -1,8 +1,9 @@
-# Validation Test Suites
+# Validation Contracts
 
-Provider-agnostic test suites - the **contract** layer of the framework.
-Each YAML defines *what* to validate; [provider configs](../providers/) import
-them and supply *how* (platform-specific scripts).
+Provider-agnostic validation contracts. Each YAML defines *what* to
+validate (checks, expected fields, thresholds) but not *how* to run it.
+[Provider configs](../providers/) import these files and supply the
+commands (steps + scripts) that produce JSON for the validations to check.
 
 - **Adding your own platform?** Start at the [my-isv scaffold](../stubs/my-isv/README.md).
 - **New to the framework?** See the [External Validation Guide](../../../docs/guides/external-validation-guide.md).
