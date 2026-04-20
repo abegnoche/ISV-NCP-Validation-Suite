@@ -129,7 +129,7 @@ Config (YAML) -> Script (any language) -> JSON output -> Validations (assertions
 
 **Stubs (ISV Scripts)**: Located in `isvctl/configs/stubs/`
 
-- Platform setup/teardown shell scripts: `stubs/k8s/setup.sh`, `stubs/slurm/setup.sh`, etc.
+- Platform setup/teardown shell scripts: `stubs/my-isv/k8s/setup.sh`, `stubs/my-isv/slurm/setup.sh`, etc.
 - Provider-agnostic template stubs: `stubs/my-isv/<domain>/*.py` (iam, control-plane, vm, bare_metal, network, image-registry). Each stub has a TODO block and a `DEMO_MODE = os.environ.get("ISVCTL_DEMO_MODE") == "1"` gate: default run returns `"Not implemented - ..."` errors, `ISVCTL_DEMO_MODE=1` (what `make smoke-test` sets) returns dummy-success output. ISVs copy this tree as a starting point.
 - AWS Python scripts organized by domain: `stubs/aws/network/`, `stubs/aws/vm/`, `stubs/aws/iam/`, etc. — fully implemented reference using boto3.
 - Shared AWS utilities: `stubs/aws/common/` (error handling, EC2 helpers, VPC helpers)

@@ -54,8 +54,8 @@ commands:
 | [`network.yaml`](network.yaml) | VPC CRUD, subnets, isolation, SG CRUD, security, connectivity, traffic, DDI, SDN | [`stubs/my-isv/network/`](../stubs/my-isv/network/) (16 scripts) | [`providers/aws/network.yaml`](../providers/aws/network.yaml) |
 | [`vm.yaml`](vm.yaml) | GPU VM lifecycle: launch → tags → stop/start → reboot → NIM → teardown | [`stubs/my-isv/vm/`](../stubs/my-isv/vm/) (8 scripts) | [`providers/aws/vm.yaml`](../providers/aws/vm.yaml) |
 | [`bare_metal.yaml`](bare_metal.yaml) | BMaaS lifecycle: launch → tags → topology → serial → stop/start → reboot → power-cycle → NIM → teardown | [`stubs/my-isv/bare_metal/`](../stubs/my-isv/bare_metal/) (13 scripts) | [`providers/aws/bare_metal.yaml`](../providers/aws/bare_metal.yaml) |
-| [`k8s.yaml`](k8s.yaml) | Kubernetes GPU cluster: nodes, GPU operator, scheduling, workloads | [`stubs/k8s/`](../stubs/k8s/) (2 scripts) | [`providers/aws/eks.yaml`](../providers/aws/eks.yaml) |
-| [`slurm.yaml`](slurm.yaml) | Slurm HPC cluster: partitions, jobs, GPU allocation | [`stubs/slurm/`](../stubs/slurm/) (2 scripts) | — |
+| [`k8s.yaml`](k8s.yaml) | Kubernetes GPU cluster: nodes, GPU operator, scheduling, workloads | [`stubs/my-isv/k8s/`](../stubs/my-isv/k8s/) (2 scripts) | [`providers/aws/eks.yaml`](../providers/aws/eks.yaml) |
+| [`slurm.yaml`](slurm.yaml) | Slurm HPC cluster: partitions, jobs, GPU allocation | [`stubs/my-isv/slurm/`](../stubs/my-isv/slurm/) (2 scripts) | — |
 | [`control-plane.yaml`](control-plane.yaml) | API health, access key lifecycle, tenant lifecycle | [`stubs/my-isv/control-plane/`](../stubs/my-isv/control-plane/) (10 scripts) | [`providers/aws/control-plane.yaml`](../providers/aws/control-plane.yaml) |
 | [`image-registry.yaml`](image-registry.yaml) | Image upload, CRUD, VM launch, install config, BMaaS provisioning | [`stubs/my-isv/image-registry/`](../stubs/my-isv/image-registry/) (7 scripts) | [`providers/aws/image-registry.yaml`](../providers/aws/image-registry.yaml) |
 
@@ -129,8 +129,8 @@ commands:
 
 | Step | Phase | Script |
 |------|-------|--------|
-| `setup` | setup | `stubs/k8s/setup.sh` |
-| `teardown` | teardown | `stubs/k8s/teardown.sh` |
+| `setup` | setup | `stubs/my-isv/k8s/setup.sh` |
+| `teardown` | teardown | `stubs/my-isv/k8s/teardown.sh` |
 
 Validations use `kubectl` directly (or a custom CLI via the `KUBECTL` env var): node counts, GPU operator, pod health, NCCL/NIM workloads.
 
@@ -138,8 +138,8 @@ Validations use `kubectl` directly (or a custom CLI via the `KUBECTL` env var): 
 
 | Step | Phase | Script |
 |------|-------|--------|
-| `setup` | setup | `stubs/slurm/setup.sh` |
-| `teardown` | teardown | `stubs/slurm/teardown.sh` |
+| `setup` | setup | `stubs/my-isv/slurm/setup.sh` |
+| `teardown` | teardown | `stubs/my-isv/slurm/teardown.sh` |
 
 Validations use `sinfo`/`srun` directly: partitions, GPU allocation, job scheduling.
 
