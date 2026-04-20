@@ -80,11 +80,13 @@ demo-test: ## Run all my-isv living examples with ISVCTL_DEMO_MODE=1
 		echo "=========================================="; \
 		echo "Demo test: $$domain"; \
 		echo "=========================================="; \
+		echo "Running cmd: ISVCTL_DEMO_MODE=1 uv run isvctl test run -f isvctl/configs/providers/my-isv/$$domain.yaml"; \
 		ISVCTL_DEMO_MODE=1 uv run isvctl test run \
 			-f isvctl/configs/providers/my-isv/$$domain.yaml || exit 1; \
 	done
 	@echo ""
 	@echo "✅ All my-isv living examples passed in demo mode!"
+	@echo "Domains: $(MY_ISV_DOMAINS)"
 
 coverage: ## Run tests with coverage and generate combined report
 	@echo "Running tests with coverage..."
