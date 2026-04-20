@@ -33,7 +33,8 @@ Required JSON output fields (read by SubnetConfigCheck):
     ],
     "tests": {                              # object  - per-step results
       "create_vpc":         {"passed": true},
-      "create_subnets":     {"passed": true},
+      "create_subnets":     {"passed": true,
+                             "count": 4},   # int     - number of subnets created
       "az_distribution":    {"passed": true,
                              "az_count": 2,
                              "azs": ["az-a", "az-b"]},

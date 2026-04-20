@@ -21,19 +21,18 @@ This script is called during the "test" phase. It is SELF-CONTAINED:
 
 Required JSON output fields:
   {
-    "success": true,                           # boolean - did all security tests pass?
-    "platform": "network",                     # string  - always "network"
-    "test_name": "security_blocking",          # string  - always "security_blocking"
-    "tests": {                                 # object  - per-test results
-      "default_deny": {
-        "passed": true                         # boolean - default deny works?
-      },
-      "specific_allow": {
-        "passed": true                         # boolean - allow rules work?
-      },
-      "egress_rules": {
-        "passed": true                         # boolean - egress rules work?
-      }
+    "success": true,                              # boolean - did all security tests pass?
+    "platform": "network",                        # string  - always "network"
+    "test_name": "security_blocking",             # string  - always "security_blocking"
+    "network_id": "vpc-...",                      # string  - VPC used for the test
+    "tests": {                                    # object  - per-step results
+      "create_vpc":                  {"passed": true},
+      "sg_default_deny_inbound":     {"passed": true}, # SG denies all inbound by default
+      "sg_allows_specific_ssh":      {"passed": true}, # SG allow rule for SSH works
+      "sg_denies_vpc_icmp":          {"passed": true}, # SG denies VPC-internal ICMP
+      "nacl_explicit_deny":          {"passed": true}, # NACL explicit-deny rule applies
+      "default_nacl_allows_inbound": {"passed": true}, # Default NACL allows inbound
+      "sg_restricted_egress":        {"passed": true}  # Egress restrictions enforced
     }
   }
 
@@ -67,9 +66,13 @@ def main() -> int:
         "platform": "network",
         "test_name": "security_blocking",
         "tests": {
-            "default_deny": {"passed": False},
-            "specific_allow": {"passed": False},
-            "egress_rules": {"passed": False},
+            "create_vpc": {"passed": False},
+            "sg_default_deny_inbound": {"passed": False},
+            "sg_allows_specific_ssh": {"passed": False},
+            "sg_denies_vpc_icmp": {"passed": False},
+            "nacl_explicit_deny": {"passed": False},
+            "default_nacl_allows_inbound": {"passed": False},
+            "sg_restricted_egress": {"passed": False},
         },
     }
 

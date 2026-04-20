@@ -139,12 +139,21 @@ def main() -> int:
     # ╚══════════════════════════════════════════════════════════════════╝
 
     if DEMO_MODE:
+        # Drop optional sub-checks that weren't requested so the result dict
+        # only contains relevant entries (and `all()` doesn't trip on them).
+        if not args.security_group_id:
+            del result["checks"]["sg_deleted"]
+        if not args.key_name:
+            del result["checks"]["key_deleted"]
+
         result["checks"]["instance_terminated"]["passed"] = True
         if args.security_group_id:
             result["checks"]["sg_deleted"]["passed"] = True
         if args.key_name:
             result["checks"]["key_deleted"]["passed"] = True
-        result["success"] = True
+        # Compute success from the included sub-checks rather than hard-coding
+        # it, so a False sub-check can never coexist with success=True.
+        result["success"] = all(check.get("passed") for check in result["checks"].values())
     else:
         result["error"] = "Not implemented - replace with your platform's verification logic"
 

@@ -122,7 +122,7 @@ commands:
           - "--key-file"
           - "{{steps.launch_instance.key_file}}"
           - "--public-ip"
-          - "{{steps.launch_instance.public_ip}}"
+          - "{{steps.start_instance.public_ip}}"
         timeout: 60
 
       - name: serial_console

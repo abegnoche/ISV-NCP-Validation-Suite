@@ -115,7 +115,7 @@ Validations use `sinfo`/`srun` directly: partitions, GPU allocation, job schedul
 | `create_tenant` | setup | `stubs/my-isv/control-plane/create_tenant.py` | `tenant_name`, `tenant_id` |
 | `test_access_key` | test | `stubs/my-isv/control-plane/test_access_key.py` | `authenticated`, `account_id` |
 | `disable_access_key` | test | `stubs/my-isv/control-plane/disable_access_key.py` | `status` |
-| `verify_key_rejected` | test | `stubs/my-isv/control-plane/verify_key_rejected.py` | `rejected`, `error_type` |
+| `verify_key_rejected` | test | `stubs/my-isv/control-plane/verify_key_rejected.py` | `rejected`, `error_code` |
 | `list_tenants` | test | `stubs/my-isv/control-plane/list_tenants.py` | `tenants`, `found` |
 | `get_tenant` | test | `stubs/my-isv/control-plane/get_tenant.py` | `tenant_name`, `description` |
 | `delete_access_key` | teardown | `stubs/my-isv/control-plane/delete_access_key.py` | `resources_deleted` |

@@ -85,6 +85,7 @@ class StepArgCheck:
     step_name: str
     stub_path: Path
     flags: tuple[str, ...]
+    missing_reason: str | None = None
 
     def id(self) -> str:
         rel_yaml = self.yaml_path.relative_to(CONFIGS_DIR)
@@ -157,12 +158,27 @@ def _collect_yaml_checks() -> list[StepArgCheck]:
             if not isinstance(command, str) or not args:
                 continue
             stub_path = _resolve_stub_path(yaml_path, command)
-            if stub_path is None or not stub_path.exists():
+            flags = _yaml_flag_tokens(args)
+            if stub_path is None:
+                # Command didn't reference any .py/.sh script; nothing to check.
+                continue
+            if not stub_path.exists():
+                # Path drift: the YAML's command points at a stub that doesn't
+                # exist on disk. Emit a check so the test fails loudly instead
+                # of silently skipping (which is what let drift slip through).
+                checks.append(
+                    StepArgCheck(
+                        yaml_path=yaml_path,
+                        step_name=name,
+                        stub_path=stub_path,
+                        flags=tuple(flags),
+                        missing_reason=f"stub script not found at {stub_path}",
+                    ),
+                )
                 continue
             if stub_path.suffix != ".py":
                 # Shell scripts don't use argparse; skip them.
                 continue
-            flags = _yaml_flag_tokens(args)
             if not flags:
                 continue
             checks.append(
@@ -183,6 +199,8 @@ def _collect_yaml_checks() -> list[StepArgCheck]:
 )
 def test_yaml_step_args_match_stub_cli(check: StepArgCheck) -> None:
     """Every ``--flag`` a YAML step passes must be accepted by the stub's argparse."""
+    if check.missing_reason is not None:
+        pytest.fail(f"{check.id()}: {check.missing_reason}")
     accepted = extract_argparse_flags(check.stub_path)
     unknown = [flag for flag in check.flags if flag not in accepted]
     assert not unknown, (

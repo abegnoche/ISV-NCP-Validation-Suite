@@ -96,7 +96,7 @@ def main() -> int:
     if DEMO_MODE:
         fqdn = f"web.{args.domain}"
         result["tests"] = {
-            "create_vpc_with_dns": {"passed": True},
+            "create_vpc_with_dns": {"passed": True, "vpc_id": "dummy-vpc-dns"},
             "create_hosted_zone": {"passed": True, "zone_id": "dummy-zone"},
             "create_dns_record": {"passed": True, "fqdn": fqdn},
             "verify_dns_settings": {"passed": True},

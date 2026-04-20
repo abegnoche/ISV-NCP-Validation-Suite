@@ -89,7 +89,9 @@ def main() -> int:
     }
 
     # ── Dev workflow: reuse existing instance ──────────────────────────
-    if os.environ.get("BM_INSTANCE_ID") and os.environ.get("BM_KEY_FILE"):
+    # Demo mode (ISVCTL_DEMO_MODE=1) takes precedence so `make demo-test` is
+    # deterministic even when these env vars happen to be set in a dev shell.
+    if (not DEMO_MODE) and os.environ.get("BM_INSTANCE_ID") and os.environ.get("BM_KEY_FILE"):
         instance_id = os.environ["BM_INSTANCE_ID"]
         key_file = os.environ["BM_KEY_FILE"]
         print(f"Reusing existing instance {instance_id}", file=sys.stderr)

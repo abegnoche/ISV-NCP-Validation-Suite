@@ -21,7 +21,8 @@ Required JSON output:
     "platform":       str   - "image_registry",
     "instance_id":    str   - bare-metal instance identifier,
     "config_id":      str   - install config used for provisioning,
-    "instance_state": str   - "running",
+    "instance_state": str   - "running" (descriptive contract field),
+    "state":          str   - "running" (read by InstanceStateCheck validator),
     "error":          str   - (optional) error message, present when success is false
 }
 
@@ -55,6 +56,7 @@ def main() -> int:
         "instance_id": "",
         "config_id": args.config_id,
         "instance_state": "",
+        "state": "",
     }
 
     # ╔══════════════════════════════════════════════════════════════════╗

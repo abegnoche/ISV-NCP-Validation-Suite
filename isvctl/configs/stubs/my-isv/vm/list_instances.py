@@ -99,7 +99,7 @@ def main() -> int:
             result["total_count"] = len(result["instances"])
             if args.instance_id:
                 result["target_instance"] = args.instance_id
-                result["target_found"] = True
+                result["found_target"] = True
             result["success"] = True
         else:
             result["error"] = "Not implemented - replace with your platform's instance listing logic"

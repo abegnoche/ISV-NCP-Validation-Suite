@@ -97,12 +97,12 @@ def main() -> int:
         result["vpc_a"] = {"id": "dummy-vpc-peer-a", "cidr": args.cidr_a}
         result["vpc_b"] = {"id": "dummy-vpc-peer-b", "cidr": args.cidr_b}
         result["tests"] = {
-            "create_vpc_a": {"passed": True},
-            "create_vpc_b": {"passed": True},
+            "create_vpc_a": {"passed": True, "vpc_id": result["vpc_a"]["id"]},
+            "create_vpc_b": {"passed": True, "vpc_id": result["vpc_b"]["id"]},
             "create_peering": {"passed": True, "peering_id": "dummy-peer"},
             "accept_peering": {"passed": True},
             "add_routes": {"passed": True},
-            "peering_active": {"passed": True},
+            "peering_active": {"passed": True, "status": "active"},
         }
         result["success"] = True
     else:

@@ -75,7 +75,7 @@ def main() -> int:
 
     if DEMO_MODE:
         result["tests"] = {
-            "allocate_eip": {"passed": True, "public_ip": "203.0.113.99"},
+            "allocate_eip": {"passed": True, "allocation_id": "eipalloc-demo", "public_ip": "203.0.113.99"},
             "associate_to_a": {"passed": True},
             "verify_on_a": {"passed": True},
             "reassociate_to_b": {"passed": True, "switch_seconds": 2.5},

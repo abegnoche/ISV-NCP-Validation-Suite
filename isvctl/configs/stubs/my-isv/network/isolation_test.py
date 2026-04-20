@@ -25,15 +25,13 @@ Required JSON output fields:
     "platform": "network",                     # string  - always "network"
     "test_name": "vpc_isolation",              # string  - always "vpc_isolation"
     "tests": {                                 # object  - per-test results
-      "no_peering": {
-        "passed": true                         # boolean - no peering found?
-      },
-      "no_cross_routes": {
-        "passed": true                         # boolean - no cross-VPC routes?
-      },
-      "sg_isolation": {
-        "passed": true                         # boolean - SGs block cross-VPC traffic?
-      }
+      "create_vpc_a":        {"passed": true},
+      "create_vpc_b":        {"passed": true},
+      "no_peering":          {"passed": true}, # boolean - no peering found?
+      "no_cross_routes_a":   {"passed": true}, # boolean - VPC A has no route to B's CIDR
+      "no_cross_routes_b":   {"passed": true}, # boolean - VPC B has no route to A's CIDR
+      "sg_isolation_a":      {"passed": true}, # boolean - VPC A SGs block traffic from B
+      "sg_isolation_b":      {"passed": true}  # boolean - VPC B SGs block traffic from A
     }
   }
 
@@ -68,9 +66,13 @@ def main() -> int:
         "platform": "network",
         "test_name": "vpc_isolation",
         "tests": {
+            "create_vpc_a": {"passed": False},
+            "create_vpc_b": {"passed": False},
             "no_peering": {"passed": False},
-            "no_cross_routes": {"passed": False},
-            "sg_isolation": {"passed": False},
+            "no_cross_routes_a": {"passed": False},
+            "no_cross_routes_b": {"passed": False},
+            "sg_isolation_a": {"passed": False},
+            "sg_isolation_b": {"passed": False},
         },
     }
 
@@ -81,20 +83,28 @@ def main() -> int:
     # ║    client = MyCloudClient(region=args.region)                    ║
     # ║    vpc_a = client.create_vpc(cidr=args.cidr_a)                   ║
     # ║    vpc_b = client.create_vpc(cidr=args.cidr_b)                   ║
+    # ║    result["tests"]["create_vpc_a"]["passed"] = True              ║
+    # ║    result["tests"]["create_vpc_b"]["passed"] = True              ║
     # ║                                                                  ║
     # ║    # Check no peering                                            ║
     # ║    peerings = client.list_peerings(vpc_a.id, vpc_b.id)           ║
     # ║    result["tests"]["no_peering"]["passed"] = len(peerings)==0    ║
     # ║                                                                  ║
-    # ║    # Check no cross-VPC routes                                   ║
+    # ║    # Check no cross-VPC routes (per direction)                   ║
     # ║    routes_a = client.get_route_table(vpc_a.id)                   ║
-    # ║    has_cross = any(r.dest == args.cidr_b for r in routes_a)      ║
-    # ║    result["tests"]["no_cross_routes"]["passed"] = not has_cross  ║
+    # ║    has_a_to_b = any(r.dest == args.cidr_b for r in routes_a)     ║
+    # ║    result["tests"]["no_cross_routes_a"]["passed"] = not has_a_to_b
+    # ║    routes_b = client.get_route_table(vpc_b.id)                   ║
+    # ║    has_b_to_a = any(r.dest == args.cidr_a for r in routes_b)     ║
+    # ║    result["tests"]["no_cross_routes_b"]["passed"] = not has_b_to_a
     # ║                                                                  ║
-    # ║    # Check security group isolation                              ║
+    # ║    # Check security group isolation (per direction)              ║
     # ║    sg_a = client.get_default_sg(vpc_a.id)                        ║
-    # ║    allows_b = any(r.cidr == args.cidr_b for r in sg_a.ingress)   ║
-    # ║    result["tests"]["sg_isolation"]["passed"] = not allows_b      ║
+    # ║    a_allows_b = any(r.cidr == args.cidr_b for r in sg_a.ingress) ║
+    # ║    result["tests"]["sg_isolation_a"]["passed"] = not a_allows_b  ║
+    # ║    sg_b = client.get_default_sg(vpc_b.id)                        ║
+    # ║    b_allows_a = any(r.cidr == args.cidr_a for r in sg_b.ingress) ║
+    # ║    result["tests"]["sg_isolation_b"]["passed"] = not b_allows_a  ║
     # ║                                                                  ║
     # ║    # Cleanup                                                     ║
     # ║    client.delete_vpc(vpc_a.id)                                   ║

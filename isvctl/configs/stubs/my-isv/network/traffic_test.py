@@ -22,19 +22,24 @@ This script is called during the "test" phase. It is SELF-CONTAINED:
 
 Required JSON output fields:
   {
-    "success": true,                           # boolean - did all traffic tests pass?
-    "platform": "network",                     # string  - always "network"
-    "test_name": "traffic_flow",               # string  - always "traffic_flow"
-    "tests": {                                 # object  - per-test results
-      "ping_allowed": {
-        "passed": true                         # boolean - ping works when allowed?
-      },
-      "ping_blocked": {
-        "passed": true                         # boolean - ping blocked when denied?
-      },
-      "internet_access": {
-        "passed": true                         # boolean - outbound internet works?
-      }
+    "success": true,                            # boolean - did all traffic tests pass?
+    "platform": "network",                      # string  - always "network"
+    "test_name": "traffic_flow",                # string  - always "traffic_flow"
+    "network_id": "vpc-...",                    # string  - VPC used for the test
+    "tests": {                                  # object  - per-step results
+      "create_vpc":             {"passed": true},
+      "create_igw":             {"passed": true},
+      "network_setup":          {"passed": true},
+      "create_iam":             {"passed": true},
+      "create_security_groups": {"passed": true},
+      "launch_instances":       {"passed": true},
+      "instances_running":      {"passed": true},
+      "ssm_ready":              {"passed": true},
+      "traffic_allowed":        {"passed": true,
+                                 "latency_ms": 0.5}, # optional latency
+      "traffic_blocked":        {"passed": true},
+      "internet_icmp":          {"passed": true},
+      "internet_http":          {"passed": true}
     }
   }
 
@@ -68,9 +73,18 @@ def main() -> int:
         "platform": "network",
         "test_name": "traffic_flow",
         "tests": {
-            "ping_allowed": {"passed": False},
-            "ping_blocked": {"passed": False},
-            "internet_access": {"passed": False},
+            "create_vpc": {"passed": False},
+            "create_igw": {"passed": False},
+            "network_setup": {"passed": False},
+            "create_iam": {"passed": False},
+            "create_security_groups": {"passed": False},
+            "launch_instances": {"passed": False},
+            "instances_running": {"passed": False},
+            "ssm_ready": {"passed": False},
+            "traffic_allowed": {"passed": False},
+            "traffic_blocked": {"passed": False},
+            "internet_icmp": {"passed": False},
+            "internet_http": {"passed": False},
         },
     }
 
