@@ -26,6 +26,21 @@ uv run isvctl --help
 
 ## Quick Start
 
+### Try it without cloud credentials (~10s)
+
+The fastest way to see the framework run is the `my-isv` scaffold — a set of
+copy-and-fill-in stubs with a demo-mode fallback that makes every validation
+pass without touching a real cloud:
+
+```bash
+make demo-test
+```
+
+This runs all 6 my-isv provider configs end-to-end under `ISVCTL_DEMO_MODE=1`.
+No credentials, no cloud resources created. Great sanity check after
+install, and the starting point if you're adding a new platform —
+see [`stubs/my-isv/`](../isvctl/configs/stubs/my-isv/).
+
 ### Running Validation Tests
 
 **From source (development):**
@@ -118,7 +133,8 @@ See [Remote Deployment Guide](guides/remote-deployment.md) for details.
 
 ## Next Steps
 
-- [Validation Templates](../isvctl/configs/tests/README.md) - Adding your own platform? Start here
+- [my-isv Scaffold](../isvctl/configs/stubs/my-isv/README.md) - Adding your own platform? Start here
+- [Validation Test Suites](../isvctl/configs/tests/README.md) - The platform-agnostic validation contract
 - [AWS Reference Implementation](references/aws.md) - Working AWS examples to study
 - [Configuration Guide](guides/configuration.md) - Config file format and options
 - [External Validation Guide](guides/external-validation-guide.md) - Custom validations without modifying the repo

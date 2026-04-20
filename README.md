@@ -54,26 +54,21 @@ Running phases: ['setup', 'test', 'teardown']
 [PASS] All phases completed successfully
 ```
 
-## Running against your own platform
+## Adding your own platform
 
-Start from the **my-isv living example** — a set of provider-agnostic
-template stubs that pass all validations under `ISVCTL_DEMO_MODE=1` and
-error out with "Not implemented" otherwise:
+Start from the **[my-isv scaffold](isvctl/configs/stubs/my-isv/README.md)** —
+copy-and-fill-in stubs covering every validation domain (IAM, control-plane,
+VM, bare metal, network, image registry, k8s, Slurm), with a demo-mode
+fallback so you can preview the whole pipeline before writing any code:
 
 ```bash
-# See the full pipeline run end-to-end in demo mode (~10s, no cloud)
-make demo-test
-
-# Copy the scaffolding for your platform and implement each stub
-cp -r isvctl/configs/stubs/my-isv/ isvctl/configs/stubs/acme/
-cp -r isvctl/configs/providers/my-isv/ isvctl/configs/providers/acme/
-# Update providers/acme/*.yaml to reference stubs/acme/ and implement the stub functions where TODO markers appear
-uv run isvctl test run -f isvctl/configs/providers/acme/vm.yaml
+make demo-test   # runs all 6 my-isv configs end-to-end, no cloud, ~10s
 ```
 
-Templates are available for: [IAM](isvctl/configs/tests/iam.yaml) | [Network](isvctl/configs/tests/network.yaml) | [VM](isvctl/configs/tests/vm.yaml) | [Bare Metal](isvctl/configs/tests/bare_metal.yaml) | [Kubernetes](isvctl/configs/tests/k8s.yaml) | [Control Plane](isvctl/configs/tests/control-plane.yaml) | [Image Registry](isvctl/configs/tests/image-registry.yaml)
-
-See the [Templates README](isvctl/configs/tests/README.md) for the full guide, and the [AWS Reference Implementation](docs/references/aws.md) as a working example.
+Then copy the scaffold to your platform's name, implement each `TODO:` block,
+and run without the demo flag. The [scaffold README](isvctl/configs/stubs/my-isv/README.md)
+has the full walkthrough; the [AWS reference](docs/references/aws.md) is a
+working implementation of every stub.
 
 ## Documentation
 
@@ -90,7 +85,8 @@ See [docs/](docs/) for full documentation:
 
 ### References
 
-- [Validation Templates](isvctl/configs/tests/README.md) - Provider-agnostic templates for adding your platform
+- [my-isv Scaffold](isvctl/configs/stubs/my-isv/README.md) - Copy-and-fill-in stubs for adding your own platform
+- [Validation Test Suites](isvctl/configs/tests/README.md) - Provider-agnostic validation contract
 - [AWS Reference Implementation](docs/references/aws.md) - Working AWS examples for all validation domains
 
 ### Package Reference

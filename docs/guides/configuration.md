@@ -50,6 +50,7 @@ Pre-built configs are provided in `isvctl/configs/`:
 
 | Config | Description |
 | ------ | ----------- |
+| `providers/my-isv/*.yaml` | [my-isv scaffold](../../isvctl/configs/stubs/my-isv/README.md) — copy-and-fill-in for your own platform (runs end-to-end under `ISVCTL_DEMO_MODE=1`) |
 | `providers/aws/control-plane.yaml` | AWS API health, access key lifecycle, tenant management |
 | `providers/aws/network.yaml` | AWS VPC network validation (6 test suites) |
 | `providers/aws/vm.yaml` | AWS EC2 GPU instance tests |

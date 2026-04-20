@@ -1,50 +1,12 @@
 # Validation Test Suites
 
-Provider-agnostic test suites for ISV Lab validation. Each YAML defines **what to test**; provider configs import them and supply **how** (platform-specific scripts).
+Provider-agnostic test suites — the **contract** layer of the framework.
+Each YAML defines *what* to validate; [provider configs](../providers/) import
+them and supply *how* (platform-specific scripts).
 
-For background on the step-based architecture, writing scripts, and running validations, see the [External Validation Guide](../../../docs/guides/external-validation-guide.md).
-
-## Quick Start
-
-### Try the living example first (~10s, no cloud needed)
-
-```bash
-make demo-test
-```
-
-This runs all 6 my-isv provider configs with `ISVCTL_DEMO_MODE=1` set, which
-flips the template stubs under `isvctl/configs/stubs/my-isv/` into demo-success
-mode so the validation contract can be exercised without real infrastructure.
-
-### Write your own provider
-
-```bash
-# 1. Copy the my-isv scaffolding (stubs + provider configs) as a starting point
-cp -r isvctl/configs/stubs/my-isv/ isvctl/configs/stubs/acme/
-cp -r isvctl/configs/providers/my-isv/ isvctl/configs/providers/acme/
-
-# 2. Update providers/acme/*.yaml to reference stubs/acme/ (sed or by hand)
-
-# 3. Implement each stub. Fill in the TODO block in each script; the default
-#    branch exits with "Not implemented" until you do.
-
-# 4. Run
-uv run isvctl test run -f isvctl/configs/providers/acme/vm.yaml
-```
-
-Or use the **import directive** (recommended — only override what changes):
-
-```yaml
-# isvctl/configs/providers/acme/vm.yaml
-import: ../../tests/vm.yaml
-
-commands:
-  vm:
-    steps:
-      - name: launch_instance
-        command: "python3 ../../stubs/acme/vm/launch_instance.py"
-      # ... override only the commands, validations stay the same
-```
+- **Adding your own platform?** Start at the [my-isv scaffold](../stubs/my-isv/README.md).
+- **New to the framework?** See the [External Validation Guide](../../../docs/guides/external-validation-guide.md).
+- **Try it without cloud credentials:** `make demo-test`.
 
 ## Available Test Suites
 
@@ -52,10 +14,10 @@ commands:
 |------------|--------|-------|---------------|
 | [`iam.yaml`](iam.yaml) | User lifecycle (create → verify → delete) | [`stubs/my-isv/iam/`](../stubs/my-isv/iam/) (3 scripts) | [`providers/aws/iam.yaml`](../providers/aws/iam.yaml) |
 | [`network.yaml`](network.yaml) | VPC CRUD, subnets, isolation, SG CRUD, security, connectivity, traffic, DDI, SDN | [`stubs/my-isv/network/`](../stubs/my-isv/network/) (16 scripts) | [`providers/aws/network.yaml`](../providers/aws/network.yaml) |
-| [`vm.yaml`](vm.yaml) | GPU VM lifecycle: launch → tags → stop/start → reboot → NIM → teardown | [`stubs/my-isv/vm/`](../stubs/my-isv/vm/) (8 scripts) | [`providers/aws/vm.yaml`](../providers/aws/vm.yaml) |
-| [`bare_metal.yaml`](bare_metal.yaml) | BMaaS lifecycle: launch → tags → topology → serial → stop/start → reboot → power-cycle → NIM → teardown | [`stubs/my-isv/bare_metal/`](../stubs/my-isv/bare_metal/) (13 scripts) | [`providers/aws/bare_metal.yaml`](../providers/aws/bare_metal.yaml) |
-| [`k8s.yaml`](k8s.yaml) | Kubernetes GPU cluster: nodes, GPU operator, scheduling, workloads | [`stubs/my-isv/k8s/`](../stubs/my-isv/k8s/) (2 scripts) | [`providers/aws/eks.yaml`](../providers/aws/eks.yaml) |
-| [`slurm.yaml`](slurm.yaml) | Slurm HPC cluster: partitions, jobs, GPU allocation | [`stubs/my-isv/slurm/`](../stubs/my-isv/slurm/) (2 scripts) | — |
+| [`vm.yaml`](vm.yaml) | GPU VM lifecycle: launch → tags → stop/start → reboot → describe → NIM → teardown | [`stubs/my-isv/vm/`](../stubs/my-isv/vm/) (9 scripts) | [`providers/aws/vm.yaml`](../providers/aws/vm.yaml) |
+| [`bare_metal.yaml`](bare_metal.yaml) | BMaaS lifecycle: launch → tags → topology → serial → stop/start → reboot → power-cycle → NIM → teardown | [`stubs/my-isv/bare_metal/`](../stubs/my-isv/bare_metal/) (12 scripts) | [`providers/aws/bare_metal.yaml`](../providers/aws/bare_metal.yaml) |
+| [`k8s.yaml`](k8s.yaml) | Kubernetes GPU cluster: nodes, GPU operator, scheduling, workloads | [`stubs/my-isv/k8s/`](../stubs/my-isv/k8s/) (9 shell: generic + k3s/microk8s/minikube variants) | [`providers/aws/eks.yaml`](../providers/aws/eks.yaml) |
+| [`slurm.yaml`](slurm.yaml) | Slurm HPC cluster: partitions, jobs, GPU allocation | [`stubs/my-isv/slurm/`](../stubs/my-isv/slurm/) (2 shell) | — |
 | [`control-plane.yaml`](control-plane.yaml) | API health, access key lifecycle, tenant lifecycle | [`stubs/my-isv/control-plane/`](../stubs/my-isv/control-plane/) (10 scripts) | [`providers/aws/control-plane.yaml`](../providers/aws/control-plane.yaml) |
 | [`image-registry.yaml`](image-registry.yaml) | Image upload, CRUD, VM launch, install config, BMaaS provisioning | [`stubs/my-isv/image-registry/`](../stubs/my-isv/image-registry/) (7 scripts) | [`providers/aws/image-registry.yaml`](../providers/aws/image-registry.yaml) |
 
@@ -97,10 +59,11 @@ commands:
 | `launch_instance` | setup | `stubs/my-isv/vm/launch_instance.py` | `instance_id`, `public_ip`, `key_file`, `vpc_id` |
 | `list_instances` | test | `stubs/my-isv/vm/list_instances.py` | `instances`, `total_count` |
 | `verify_tags` | test | `stubs/my-isv/vm/describe_tags.py` | `instance_id`, `tags`, `tag_count` |
+| `serial_console` | test | `stubs/my-isv/vm/serial_console.py` | `console_available`, `serial_access_enabled` |
 | `stop_instance` | test | `stubs/my-isv/vm/stop_instance.py` | `instance_id`, `state`, `stop_initiated` |
 | `start_instance` | test | `stubs/my-isv/vm/start_instance.py` | `instance_id`, `state`, `public_ip`, `ssh_ready` |
-| `reboot_instance` | test | `stubs/my-isv/vm/reboot_instance.py` | `uptime_seconds`, `ssh_connectivity` |
-| `serial_console` | test | `stubs/my-isv/vm/serial_console.py` | `console_available`, `serial_access_enabled` |
+| `reboot_instance` | test | `stubs/my-isv/vm/reboot_instance.py` | `reboot_initiated`, `ssh_ready`, `uptime_seconds` |
+| `describe_instance` | test | `stubs/my-isv/vm/describe_instance.py` | `instance_id`, `state`, `public_ip`, `key_file` |
 | `deploy_nim` | test | `stubs/common/deploy_nim.py` | `container_id`, `health_endpoint` |
 | `teardown_nim` | teardown | `stubs/common/teardown_nim.py` | `message` |
 | `teardown` | teardown | `stubs/my-isv/vm/teardown.py` | `resources_deleted`, `message` |
@@ -116,7 +79,7 @@ commands:
 | `serial_console` | test | `stubs/my-isv/bare_metal/serial_console.py` | `console_available`, `serial_access_enabled` |
 | `stop_instance` | test | `stubs/my-isv/bare_metal/stop_instance.py` | `instance_id`, `state`, `stop_initiated` |
 | `start_instance` | test | `stubs/my-isv/bare_metal/start_instance.py` | `instance_id`, `state`, `public_ip`, `ssh_ready` |
-| `reboot_instance` | test | `stubs/my-isv/bare_metal/reboot_instance.py` | `uptime_seconds`, `ssh_connectivity` |
+| `reboot_instance` | test | `stubs/my-isv/bare_metal/reboot_instance.py` | `reboot_initiated`, `ssh_ready`, `uptime_seconds` |
 | `power_cycle_instance` | test | `stubs/my-isv/bare_metal/power_cycle_instance.py` | `instance_id`, `state`, `public_ip`, `ssh_ready` |
 | `describe_instance` | test | `stubs/my-isv/bare_metal/describe_instance.py` | `instance_state`, `public_ip`, `key_file` |
 | `reinstall_instance` | test | `stubs/my-isv/bare_metal/reinstall_instance.py` | `instance_state` (skipped by default) |
@@ -172,6 +135,7 @@ Validations use `sinfo`/`srun` directly: partitions, GPU allocation, job schedul
 
 ## Related Documentation
 
+- [my-isv Scaffold](../stubs/my-isv/README.md) — Copy-and-fill-in stubs for your own platform
 - [External Validation Guide](../../../docs/guides/external-validation-guide.md) — Writing scripts, config format, running validations
 - [Configuration Guide](../../../docs/guides/configuration.md) — Full config reference (steps, schemas, templates)
 - [AWS Reference Implementation](../../../docs/references/aws.md) — Working AWS examples for all test suites

@@ -248,52 +248,25 @@ python ./scripts/provision.py --name test 2>/dev/null | jq .
 
 ---
 
-## Templates
+## Templates and scaffolds
 
-For common validation scenarios, **pre-built test suites** are available in [`isvctl/configs/tests/`](../../isvctl/configs/tests/README.md), paired with the [`my-isv/`](../../isvctl/configs/stubs/my-isv/) reference scaffold under `isvctl/configs/stubs/` and matching provider configs in [`isvctl/configs/providers/my-isv/`](../../isvctl/configs/providers/my-isv/). These provide a copy-and-customize starting point with skeleton scripts and documented JSON contracts.
+For common validation scenarios, don't write your config from scratch — the
+repo ships a ready-made scaffold:
 
-| Template | What it tests | Stubs |
-|----------|---------------|-------|
-| [`iam.yaml`](../../isvctl/configs/tests/iam.yaml) | User create → verify credentials → delete | 3 scripts |
-| [`network.yaml`](../../isvctl/configs/tests/network.yaml) | VPC CRUD, subnets, isolation, security, connectivity, traffic | 8 scripts |
-| [`vm.yaml`](../../isvctl/configs/tests/vm.yaml) | Launch GPU VM → list → reboot → NIM deploy → teardown | 4 scripts + 2 shared |
-| [`bare_metal.yaml`](../../isvctl/configs/tests/bare_metal.yaml) | Launch bare-metal → tags → topology → stop/start → reboot → power-cycle → NIM → teardown | 13 scripts + 2 shared |
-| [`k8s.yaml`](../../isvctl/configs/tests/k8s.yaml) | Provision K8s GPU cluster → validate nodes/GPU/workloads → teardown | 2 scripts |
-| [`control-plane.yaml`](../../isvctl/configs/tests/control-plane.yaml) | API health, access key lifecycle, tenant lifecycle | 10 scripts |
-| [`image-registry.yaml`](../../isvctl/configs/tests/image-registry.yaml) | Image upload → VM launch → install config CRUD → BMaaS install → teardown | 6 scripts |
+- [**my-isv scaffold**](../../isvctl/configs/stubs/my-isv/README.md) —
+  copy-and-fill-in stubs covering IAM, control-plane, VM, bare metal,
+  network, image registry, k8s, and Slurm. Each stub has a `TODO:` block
+  and a demo-mode fallback.
+- [**Test suite contracts**](../../isvctl/configs/tests/README.md) —
+  per-step JSON-field breakdown for every domain.
+- [**AWS reference**](../references/aws.md) — a complete working
+  implementation of every stub in the scaffold.
 
-The [`my-isv/`](../../isvctl/configs/stubs/my-isv/) directory is the reference scaffold that wires every template above into a full workflow (setup → test → teardown) using placeholder stubs. The command below runs a local *smoke test* of that pipeline — a demo execution that hits no cloud APIs and finishes in roughly 10 seconds — so you can verify the framework end-to-end before implementing real provider logic. Requires [`make`](https://www.gnu.org/software/make/) to be installed.
+Preview the whole pipeline with no cloud:
 
 ```bash
-# Preview the full pipeline under `my-isv` in demo mode (~10s, no cloud)
-make demo-test
-
-# Both directories are needed: stubs/ contains the skeleton Python/Bash implementations
-# of each provider operation (the scripts that run and output JSON — demo stubs pass
-# under ISVCTL_DEMO_MODE=1, real implementations call your cloud APIs), while providers/
-# contains the YAML config layer that wires those scripts to validation test suites and
-# defines which steps, phases, and checks apply to your platform.
-cp -r isvctl/configs/stubs/my-isv/ isvctl/configs/stubs/acme/
-cp -r isvctl/configs/providers/my-isv/ isvctl/configs/providers/acme/
-# Update providers/acme/*.yaml to reference stubs/acme/ and implement each TODO block.
-# Stubs fail with "Not implemented" by default; ISVCTL_DEMO_MODE=1 activates
-# the demo-success fallback so you can run the full pipeline before wiring real APIs.
-
-# Linux / macOS — prefix the env var inline:
-ISVCTL_DEMO_MODE=1 uv run isvctl test run -f isvctl/configs/providers/acme/vm.yaml
-
-# Windows CMD:
-#   set ISVCTL_DEMO_MODE=1 && uv run isvctl test run -f isvctl/configs/providers/acme/vm.yaml
-
-# Windows PowerShell:
-#   $env:ISVCTL_DEMO_MODE=1; uv run isvctl test run -f isvctl/configs/providers/acme/vm.yaml
-
-# Once stubs are implemented, run without the env var to call real APIs:
-uv run isvctl test run -f isvctl/configs/providers/acme/vm.yaml
+make demo-test   # sets ISVCTL_DEMO_MODE=1 and runs all 6 my-isv configs (~10s)
 ```
-
-Each template has a matching **AWS reference implementation** (`stubs/aws/...`)
-you can study as a working example. See the [AWS Reference Guide](../references/aws.md) for details.
 
 ---
 

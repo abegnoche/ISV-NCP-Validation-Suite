@@ -127,14 +127,22 @@ Config (YAML) -> Script (any language) -> JSON output -> Validations (assertions
 - Support Jinja2 templating: `"{{steps.create_network.vpc_id}}"`, `"{{region}}"` — the orchestrator warns when templates reference steps that haven't run or fields that don't exist, helping catch typos and rename mismatches
 - Multiple configs can be merged with later files overriding earlier ones
 
-**Stubs (ISV Scripts)**: Located in `isvctl/configs/stubs/`
+**Stubs (ISV Scripts)**: Located in `isvctl/configs/stubs/`. Three trees:
 
-- Platform setup/teardown shell scripts: `stubs/my-isv/k8s/setup.sh`, `stubs/my-isv/slurm/setup.sh`, etc.
-- Provider-agnostic template stubs: `stubs/my-isv/<domain>/*.py` (iam, control-plane, vm, bare_metal, network, image-registry). Each stub has a TODO block and a `DEMO_MODE = os.environ.get("ISVCTL_DEMO_MODE") == "1"` gate: default run returns `"Not implemented - ..."` errors, `ISVCTL_DEMO_MODE=1` (what `make demo-test` sets) returns dummy-success output. ISVs copy this tree as a starting point.
-- AWS Python scripts organized by domain: `stubs/aws/network/`, `stubs/aws/vm/`, `stubs/aws/iam/`, etc. — fully implemented reference using boto3.
-- Shared AWS utilities: `stubs/aws/common/` (error handling, EC2 helpers, VPC helpers)
-- Shared stubs used by multiple domains: `stubs/common/` (SSH helpers, NIM deploy/teardown)
-- Each script is self-contained and can be run manually for debugging
+- `stubs/my-isv/` — the **scaffold**: copy-and-fill-in Python/Bash stubs for
+  every domain (iam, control-plane, vm, bare_metal, network, image-registry,
+  k8s, slurm). Each Python stub has a TODO block and a
+  `DEMO_MODE = os.environ.get("ISVCTL_DEMO_MODE") == "1"` gate:
+  default run returns `"Not implemented - ..."` errors;
+  `ISVCTL_DEMO_MODE=1` (what `make demo-test` sets) returns dummy-success
+  output. See `stubs/my-isv/README.md` for the full explainer. ISVs copy
+  this tree as their starting point.
+- `stubs/aws/` — fully implemented AWS reference using boto3/Terraform,
+  organized by domain (`aws/network/`, `aws/vm/`, `aws/iam/`, ...).
+- `stubs/common/` — shared utilities used across providers (SSH helpers,
+  NIM deploy/teardown). `stubs/aws/common/` holds AWS-only helpers
+  (error handling, EC2/VPC).
+- Each script is self-contained and can be run manually for debugging.
 
 ### isvtest - Validation Framework
 
