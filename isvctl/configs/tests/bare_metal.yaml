@@ -443,6 +443,9 @@ tests:
     host_os:
       step: describe_instance
       checks:
+        VcpuPinningCheck: {}
+        PciBusCheck:
+          expected_gpus: 8
         HostSoftwareCheck: {}
 
     # GPU stress test - PyTorch matrix multiplications on all GPUs
