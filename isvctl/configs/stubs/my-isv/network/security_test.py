@@ -87,17 +87,17 @@ def main() -> int:
     # ║    # Test default deny                                           ║
     # ║    rules = client.describe_sg_rules(sg.id)                       ║
     # ║    no_inbound = len(rules.inbound) == 0                          ║
-    # ║    result["tests"]["default_deny"]["passed"] = no_inbound        ║
+    # ║    result["tests"]["sg_default_deny_inbound"]["passed"] = no_inbound ║
     # ║                                                                  ║
     # ║    # Test specific allow                                         ║
     # ║    client.authorize_ingress(sg.id, port=22, cidr="10.0.0.0/8")   ║
     # ║    rules = client.describe_sg_rules(sg.id)                       ║
     # ║    has_ssh = any(r.port == 22 for r in rules.inbound)            ║
-    # ║    result["tests"]["specific_allow"]["passed"] = has_ssh         ║
+    # ║    result["tests"]["sg_allows_specific_ssh"]["passed"] = has_ssh  ║
     # ║                                                                  ║
     # ║    # Test egress rules                                           ║
     # ║    egress = client.describe_sg_rules(sg.id).outbound             ║
-    # ║    result["tests"]["egress_rules"]["passed"] = len(egress) > 0   ║
+    # ║    result["tests"]["sg_restricted_egress"]["passed"] = len(egress) > 0 ║
     # ║                                                                  ║
     # ║    # Cleanup                                                     ║
     # ║    client.delete_vpc(vpc.id, cascade=True)                       ║

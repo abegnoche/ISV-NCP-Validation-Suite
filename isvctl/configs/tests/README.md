@@ -81,7 +81,7 @@ For the domain / stub-count / AWS-reference overview see the
 | `start_instance` | test | `stubs/my-isv/bare_metal/start_instance.py` | `instance_id`, `state`, `public_ip`, `ssh_ready` |
 | `reboot_instance` | test | `stubs/my-isv/bare_metal/reboot_instance.py` | `reboot_initiated`, `ssh_ready`, `uptime_seconds` |
 | `power_cycle_instance` | test | `stubs/my-isv/bare_metal/power_cycle_instance.py` | `instance_id`, `state`, `public_ip`, `ssh_ready` |
-| `describe_instance` | test | `stubs/my-isv/bare_metal/describe_instance.py` | `instance_state`, `public_ip`, `key_file` |
+| `describe_instance` | test | `stubs/my-isv/bare_metal/describe_instance.py` | `state`, `public_ip`, `key_file` |
 | `reinstall_instance` | test | `stubs/my-isv/bare_metal/reinstall_instance.py` | `instance_state` (skipped by default) |
 | `deploy_nim` | test | `stubs/common/deploy_nim.py` | Shared NIM deployment |
 | `teardown_nim` | teardown | `stubs/common/teardown_nim.py` | Shared NIM cleanup |
@@ -130,7 +130,7 @@ Validations use `sinfo`/`srun` directly: partitions, GPU allocation, job schedul
 | `launch_instance` | test | `stubs/my-isv/image-registry/launch_instance.py` | `instance_id`, `public_ip`, `key_path` |
 | `crud_install_config` | test | `stubs/my-isv/image-registry/crud_install_config.py` | `config_id`, `config_name`, `operations` |
 | `install_image_bm` | test | `stubs/my-isv/image-registry/install_image_bm.py` | `instance_id`, `image_id`, `instance_state` |
-| `install_config_bm` | test | `stubs/my-isv/image-registry/install_config_bm.py` | `instance_id`, `config_id`, `instance_state` |
+| `install_config_bm` | test | `stubs/my-isv/image-registry/install_config_bm.py` | `instance_id`, `config_id`, `instance_state`, `state` |
 | `teardown` | teardown | `stubs/my-isv/image-registry/teardown.py` | `resources_deleted`, `message` |
 
 ## Related Documentation
