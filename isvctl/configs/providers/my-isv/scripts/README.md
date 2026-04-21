@@ -54,7 +54,7 @@ cp -r isvctl/configs/providers/my-isv/scripts/ isvctl/configs/providers/acme/scr
 cp -r isvctl/configs/providers/my-isv/config/  isvctl/configs/providers/acme/config/
 ```
 
-**3. Update `providers/acme/config/*.yaml` to point at `scripts/acme/`** (search & replace `my-isv` -> `acme`).
+**3. Update `providers/acme/config/*.yaml` to point at `providers/acme/scripts/`** (search & replace `my-isv` -> `acme`).
 
 **4. Implement each script** - each has a `TODO:` block with pseudocode and a link to the AWS reference implementation.
 

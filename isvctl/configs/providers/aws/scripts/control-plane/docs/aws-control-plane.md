@@ -241,7 +241,7 @@ commands:
     steps:
       - name: check_api
         phase: setup
-        command: "python3 ../check_api.py"
+        command: "python3 ../scripts/control-plane/check_api.py"
         args: ["--region", "{{region}}", "--services", "{{services}}"]
 
       # ... more steps ...

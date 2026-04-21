@@ -138,7 +138,7 @@ Or create a custom config file:
 commands:
   kubernetes:
     setup:
-      command: "../setup.sh"
+      command: "isvctl/configs/providers/aws/scripts/eks/setup.sh"
       timeout: 1800
       env:
         TF_AUTO_APPROVE: "true"

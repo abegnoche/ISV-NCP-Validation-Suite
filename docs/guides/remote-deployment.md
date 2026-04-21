@@ -94,7 +94,7 @@ For Slurm tests that use docker, ensure the remote user is in the docker group o
 
 ```bash
 # If docker requires sudo on the remote host
-sudo -E env "PATH=$PATH" isvctl test run -f configs/suites/slurm.yaml
+sudo -E env "PATH=$PATH" isvctl test run -f isvctl/configs/suites/slurm.yaml
 ```
 
 ### Kubernetes
