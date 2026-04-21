@@ -81,11 +81,13 @@ def main() -> int:
         "platform": "bm",
         "instance_id": "",
         "public_ip": "",
+        "private_ip": "",
         "key_file": "",
         "vpc_id": "",
         "state": "",
         "security_group_id": "",
         "key_name": "",
+        "instance_type": "",
     }
 
     # ── Dev workflow: reuse existing instance ──────────────────────────

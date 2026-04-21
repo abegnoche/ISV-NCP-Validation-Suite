@@ -104,17 +104,17 @@ def main() -> int:
     # ║                                                                  ║
     # ║    # Test ping allowed                                           ║
     # ║    ok = client.ping(inst_a.id, inst_b.private_ip)                ║
-    # ║    result["tests"]["ping_allowed"]["passed"] = ok                ║
+    # ║    result["tests"]["traffic_allowed"]["passed"] = ok             ║
     # ║                                                                  ║
     # ║    # Test ping blocked (revoke ICMP rule)                        ║
     # ║    client.revoke_ingress(sg.id, protocol="icmp")                 ║
     # ║    blocked = not client.ping(inst_a.id, inst_b.private_ip)       ║
-    # ║    result["tests"]["ping_blocked"]["passed"] = blocked           ║
+    # ║    result["tests"]["traffic_blocked"]["passed"] = blocked        ║
     # ║                                                                  ║
     # ║    # Test internet access                                        ║
     # ║    igw = client.create_internet_gateway(vpc.id)                  ║
     # ║    inet = client.ping(inst_a.id, "8.8.8.8")                      ║
-    # ║    result["tests"]["internet_access"]["passed"] = inet           ║
+    # ║    result["tests"]["internet_icmp"]["passed"] = inet             ║
     # ║                                                                  ║
     # ║    # Cleanup                                                     ║
     # ║    client.terminate_instances([inst_a.id, inst_b.id])            ║
