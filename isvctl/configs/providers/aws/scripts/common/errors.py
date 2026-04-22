@@ -134,8 +134,8 @@ def delete_with_retry(
     Returns:
         True if the call succeeded or the resource was already gone;
         False if all attempts exhausted or a non-transient error was raised.
-        Never raises — failures are logged by the caller is expected to
-        reason about returned ``False`` (e.g. record as orphan for later cleanup).
+        Never raises — failures are logged by the caller, which is expected to
+        reason about the returned ``False`` (e.g., record as orphan for later cleanup).
     """
     last_error: Exception | None = None
     for attempt in range(1, attempts + 1):
