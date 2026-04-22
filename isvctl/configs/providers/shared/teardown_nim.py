@@ -92,8 +92,9 @@ def main() -> int:
 
             # Stop and remove container
             print(f"Stopping container: {args.container_name}", file=sys.stderr)
-            exit_code, _, stderr_out = run_cmd(ssh, f"docker rm -f {args.container_name} 2>&1")
-            result["container_removed"] = exit_code == 0 or "No such container" in stderr_out
+            exit_code, stdout_out, stderr_out = run_cmd(ssh, f"docker rm -f {args.container_name}")
+            already_gone = "No such container" in stderr_out or "No such container" in stdout_out
+            result["container_removed"] = exit_code == 0 or already_gone
 
             # Optionally remove image
             if args.remove_image and image_name:
