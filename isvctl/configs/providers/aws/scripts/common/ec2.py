@@ -93,6 +93,20 @@ def get_default_vpc_and_subnets(
     return vpc_id, subnet_list
 
 
+_ISV_CREATED_BY_TAG = {"Key": "CreatedBy", "Value": "isvtest"}
+
+
+def _has_isv_tag(tags: list[dict[str, str]] | None) -> bool:
+    """Return True if ``tags`` includes the ``CreatedBy=isvtest`` marker.
+
+    Used as a verified-reuse signal: existing resources without this tag
+    were created by something outside the suite and must not be adopted.
+    """
+    if not tags:
+        return False
+    return any(t.get("Key") == "CreatedBy" and t.get("Value") == "isvtest" for t in tags)
+
+
 def create_key_pair(
     ec2: Any,
     key_name: str,
@@ -100,9 +114,12 @@ def create_key_pair(
 ) -> str:
     """Create EC2 key pair and save the private key to a file.
 
-    If a key pair with the same name already exists and the local file is
-    present, returns the existing file path. If the key exists but the file
-    is missing, deletes and recreates the key pair.
+    Reuse is explicit and verified: if a key pair with the same name already
+    exists on AWS, the local PEM file must also exist and the AWS-side key
+    must carry the suite's ``CreatedBy=isvtest`` tag. If the tag is missing
+    the key belongs to some other caller and we raise rather than silently
+    adopt it. If the local PEM is missing we recreate (the AWS-side key is
+    useless without the private material and was ours to begin with).
 
     Args:
         ec2: Boto3 EC2 client.
@@ -114,7 +131,9 @@ def create_key_pair(
         Path to the .pem key file.
 
     Raises:
-        RuntimeError: If key pair creation fails.
+        RuntimeError: If key pair creation fails, or if an existing key by
+            the same name lacks the suite's ownership tag (verified-reuse
+            check failed — oracle gap U2).
     """
     if key_dir is None:
         key_dir = Path("/tmp")
@@ -123,13 +142,22 @@ def create_key_pair(
 
     key_path = key_dir / f"{key_name}.pem"
 
-    # Check if key already exists
+    # Check if key already exists — verify shape before reusing.
     try:
-        ec2.describe_key_pairs(KeyNames=[key_name])
-        # Key exists - if we have the file locally, reuse it
-        if key_path.exists():
+        describe = ec2.describe_key_pairs(KeyNames=[key_name])
+        existing = describe.get("KeyPairs", [{}])[0]
+        if not _has_isv_tag(existing.get("Tags")):
+            raise RuntimeError(
+                f"key pair {key_name!r} already exists on AWS but is not tagged "
+                "CreatedBy=isvtest — refusing to adopt a resource this suite "
+                "did not create (oracle gap U2 verified-reuse guard). Either "
+                "delete it manually or use a different --key-name."
+            )
+        # Tag matches — verified reuse. If we have the file locally, reuse it.
+        if key_path.exists() and key_path.stat().st_size > 0:
             return str(key_path)
-        # Key exists but no local file - delete and recreate
+        # Tag matches but local PEM is missing/empty — ours but unrecoverable;
+        # safe to delete and recreate.
         ec2.delete_key_pair(KeyName=key_name)
     except ClientError as e:
         if e.response["Error"]["Code"] != "InvalidKeyPair.NotFound":
@@ -144,7 +172,7 @@ def create_key_pair(
                     "ResourceType": "key-pair",
                     "Tags": [
                         {"Key": "Name", "Value": key_name},
-                        {"Key": "CreatedBy", "Value": "isvtest"},
+                        _ISV_CREATED_BY_TAG,
                     ],
                 }
             ],
@@ -164,6 +192,22 @@ def create_key_pair(
     return str(key_path)
 
 
+def _sg_has_ssh_rule(ip_permissions: list[dict[str, Any]] | None) -> bool:
+    """Return True if the ingress rule set includes the expected SSH rule
+    (tcp/22 from 0.0.0.0/0). Used as a shape check on reuse."""
+    if not ip_permissions:
+        return False
+    for perm in ip_permissions:
+        if (
+            perm.get("IpProtocol") == "tcp"
+            and perm.get("FromPort") == 22
+            and perm.get("ToPort") == 22
+            and any(r.get("CidrIp") == "0.0.0.0/0" for r in perm.get("IpRanges", []))
+        ):
+            return True
+    return False
+
+
 def create_security_group(
     ec2: Any,
     vpc_id: str,
@@ -172,8 +216,12 @@ def create_security_group(
 ) -> str:
     """Create a security group allowing SSH ingress, or return existing one.
 
-    If a security group with the same name already exists in the VPC,
-    returns its ID instead of raising an error.
+    Reuse is explicit and verified: if a security group with the same name
+    already exists in the VPC, we describe it and verify the invariants the
+    caller expects — CreatedBy=isvtest tag, description match, and the
+    required SSH ingress rule. If any differs, raise rather than silently
+    adopt a resource whose shape may not match what the caller needs
+    (oracle gap U2).
 
     Args:
         ec2: Boto3 EC2 client.
@@ -185,6 +233,9 @@ def create_security_group(
         Security group ID.
 
     Raises:
+        RuntimeError: If an existing SG by the same name fails the
+            verified-reuse checks (missing ownership tag, wrong description,
+            or missing expected SSH ingress rule).
         ClientError: For AWS API errors other than duplicate group.
     """
     try:
@@ -197,7 +248,7 @@ def create_security_group(
                     "ResourceType": "security-group",
                     "Tags": [
                         {"Key": "Name", "Value": name},
-                        {"Key": "CreatedBy", "Value": "isvtest"},
+                        _ISV_CREATED_BY_TAG,
                     ],
                 }
             ],
@@ -219,16 +270,43 @@ def create_security_group(
         print(f"Created security group: {sg_id}", file=sys.stderr)
         return sg_id
     except ClientError as e:
-        if e.response["Error"]["Code"] == "InvalidGroup.Duplicate":
-            sgs = ec2.describe_security_groups(
-                Filters=[
-                    {"Name": "group-name", "Values": [name]},
-                    {"Name": "vpc-id", "Values": [vpc_id]},
-                ]
+        if e.response["Error"]["Code"] != "InvalidGroup.Duplicate":
+            raise
+
+        sgs = ec2.describe_security_groups(
+            Filters=[
+                {"Name": "group-name", "Values": [name]},
+                {"Name": "vpc-id", "Values": [vpc_id]},
+            ]
+        )
+        if not sgs["SecurityGroups"]:
+            # Duplicate error claims it exists but describe can't find it —
+            # propagate the original error rather than silently swallow.
+            raise
+
+        existing = sgs["SecurityGroups"][0]
+        sg_id = existing["GroupId"]
+
+        # Verified-reuse checks — any mismatch raises rather than silently
+        # adopting a resource whose shape we didn't enforce.
+        if not _has_isv_tag(existing.get("Tags")):
+            raise RuntimeError(
+                f"security group {name!r} in VPC {vpc_id} already exists but is not tagged "
+                "CreatedBy=isvtest — refusing to adopt a resource this suite did not "
+                "create (oracle gap U2 verified-reuse guard)."
             )
-            if sgs["SecurityGroups"]:
-                return sgs["SecurityGroups"][0]["GroupId"]
-        raise
+        if existing.get("Description") != description:
+            raise RuntimeError(
+                f"security group {name!r} ({sg_id}) exists but description differs: "
+                f"expected {description!r}, got {existing.get('Description')!r}"
+            )
+        if not _sg_has_ssh_rule(existing.get("IpPermissions")):
+            raise RuntimeError(
+                f"security group {name!r} ({sg_id}) exists but is missing the required "
+                "SSH ingress rule (tcp/22 from 0.0.0.0/0) — refusing to reuse."
+            )
+        print(f"Reusing verified security group: {sg_id}", file=sys.stderr)
+        return sg_id
 
 
 def get_amazon_linux_ami(ec2: Any) -> str | None:
