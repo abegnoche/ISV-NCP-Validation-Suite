@@ -204,33 +204,46 @@ def main() -> int:
             return 1
 
         # ============================================================
-        # Step 7: Capture post-reboot uptime
+        # Step 7: Capture post-reboot uptime (affirmative reboot proof)
         # ============================================================
+        # An absent reboot_confirmed used to be treated as success by the
+        # validator; that silently passed runs whenever the post-reboot SSH
+        # or uptime parse flaked. Always emit reboot_confirmed as an explicit
+        # bool so the validator has an affirmative True to check.
         post_uptime = get_uptime_via_ssh(public_ip, args.ssh_user, args.key_file)
-        if post_uptime is not None:
-            result["uptime_seconds"] = round(post_uptime, 1)
-            print(f"  Post-reboot uptime: {post_uptime:.0f}s", file=sys.stderr)
+        if post_uptime is None:
+            result["reboot_confirmed"] = False
+            result["error"] = "Could not sample post-reboot uptime via SSH (cannot affirm reboot)"
+            print("ERROR: post-reboot uptime sample failed; reboot not affirmed", file=sys.stderr)
+            print(json.dumps(result, indent=2))
+            return 1
 
-            # Validate that uptime is lower than pre-reboot (proves reboot happened)
-            if pre_uptime is not None and post_uptime < pre_uptime:
-                result["reboot_confirmed"] = True
-                print("  Reboot confirmed (uptime reset)", file=sys.stderr)
-            elif pre_uptime is not None:
-                result["reboot_confirmed"] = False
-                print(
-                    f"  WARNING: Uptime did not decrease (pre={pre_uptime:.0f}s, post={post_uptime:.0f}s)",
-                    file=sys.stderr,
-                )
-            else:
-                # No pre-reboot uptime to compare against
-                result["reboot_confirmed"] = post_uptime < 600  # <10 min = likely rebooted
-                print(
-                    f"  Reboot likely confirmed (uptime={post_uptime:.0f}s)",
-                    file=sys.stderr,
-                )
+        result["uptime_seconds"] = round(post_uptime, 1)
+        print(f"  Post-reboot uptime: {post_uptime:.0f}s", file=sys.stderr)
 
-        result["success"] = True
-        print("Reboot completed successfully!", file=sys.stderr)
+        # Validate that uptime is lower than pre-reboot (proves reboot happened)
+        if pre_uptime is not None and post_uptime < pre_uptime:
+            result["reboot_confirmed"] = True
+            print("  Reboot confirmed (uptime reset)", file=sys.stderr)
+        elif pre_uptime is not None:
+            result["reboot_confirmed"] = False
+            print(
+                f"  WARNING: Uptime did not decrease (pre={pre_uptime:.0f}s, post={post_uptime:.0f}s)",
+                file=sys.stderr,
+            )
+        else:
+            # No pre-reboot uptime to compare against
+            result["reboot_confirmed"] = post_uptime < 600  # <10 min = likely rebooted
+            print(
+                f"  Reboot likely confirmed (uptime={post_uptime:.0f}s)",
+                file=sys.stderr,
+            )
+
+        result["success"] = result["reboot_confirmed"]
+        if result["success"]:
+            print("Reboot completed successfully!", file=sys.stderr)
+        else:
+            print("WARNING: reboot could not be affirmed from uptime", file=sys.stderr)
 
     except Exception as e:
         result["error"] = str(e)
