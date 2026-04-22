@@ -34,6 +34,7 @@ import argparse
 import json
 import os
 import sys
+import time
 import uuid
 from typing import Any
 
@@ -87,10 +88,11 @@ def main() -> int:
             aws_secret_access_key=secret_key,
         )
 
-        # STS may need a moment for IAM propagation
-        import time
-
-        for attempt in range(5):
+        # IAM is eventually consistent — new keys can take 15-30s to
+        # propagate to STS.  Retry with exponential backoff (2, 4, 8, 8, 8s
+        # = 30s total worst case).
+        max_attempts = 8
+        for attempt in range(max_attempts):
             try:
                 identity = sts.get_caller_identity()
                 result["authenticated"] = True
@@ -99,8 +101,8 @@ def main() -> int:
                 break
             except ClientError as e:
                 code = e.response.get("Error", {}).get("Code", "")
-                if code == "InvalidClientTokenId" and attempt < 4:
-                    time.sleep(2)
+                if code == "InvalidClientTokenId" and attempt < max_attempts - 1:
+                    time.sleep(min(2 ** (attempt + 1), 8))
                     continue
                 raise
 
