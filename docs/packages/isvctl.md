@@ -171,7 +171,7 @@ Place your provider-specific lifecycle scripts under `configs/providers/<your-is
 
 - `providers/my-isv/scripts/` - copy-and-fill-in template scripts for every domain
 - `providers/aws/scripts/` - fully-implemented AWS reference (follow its layout and JSON output contracts)
-- `providers/common/` - cross-provider YAML-invoked scripts (`deploy_nim.py`, `teardown_nim.py`)
+- `providers/shared/` - cross-provider YAML-invoked scripts (`deploy_nim.py`, `teardown_nim.py`)
 
 Stubs can be written in any language. They must:
 

@@ -64,8 +64,8 @@ For the domain / script-count / AWS-reference overview see the
 | `start_instance` | test | `providers/my-isv/scripts/vm/start_instance.py` | `instance_id`, `state`, `public_ip`, `ssh_ready` |
 | `reboot_instance` | test | `providers/my-isv/scripts/vm/reboot_instance.py` | `reboot_initiated`, `ssh_ready`, `uptime_seconds` |
 | `describe_instance` | test | `providers/my-isv/scripts/vm/describe_instance.py` | `instance_id`, `state`, `public_ip`, `key_file` |
-| `deploy_nim` | test | `providers/common/deploy_nim.py` | `container_id`, `health_endpoint` |
-| `teardown_nim` | teardown | `providers/common/teardown_nim.py` | `message` |
+| `deploy_nim` | test | `providers/shared/deploy_nim.py` | `container_id`, `health_endpoint` |
+| `teardown_nim` | teardown | `providers/shared/teardown_nim.py` | `message` |
 | `teardown` | teardown | `providers/my-isv/scripts/vm/teardown.py` | `resources_deleted`, `message` |
 
 ### Bare Metal (`bare_metal.yaml`)
@@ -83,8 +83,8 @@ For the domain / script-count / AWS-reference overview see the
 | `power_cycle_instance` | test | `providers/my-isv/scripts/bare_metal/power_cycle_instance.py` | `instance_id`, `state`, `public_ip`, `ssh_ready` |
 | `describe_instance` | test | `providers/my-isv/scripts/bare_metal/describe_instance.py` | `state`, `public_ip`, `key_file` |
 | `reinstall_instance` | test | `providers/my-isv/scripts/bare_metal/reinstall_instance.py` | `instance_state` (skipped by default) |
-| `deploy_nim` | test | `providers/common/deploy_nim.py` | Shared NIM deployment |
-| `teardown_nim` | teardown | `providers/common/teardown_nim.py` | Shared NIM cleanup |
+| `deploy_nim` | test | `providers/shared/deploy_nim.py` | Shared NIM deployment |
+| `teardown_nim` | teardown | `providers/shared/teardown_nim.py` | Shared NIM cleanup |
 | `teardown` | teardown | `providers/my-isv/scripts/bare_metal/teardown.py` | `resources_deleted`, `message` |
 | `verify_teardown` | teardown | `providers/my-isv/scripts/bare_metal/verify_terminated.py` | `checks.instance_terminated`, `checks.sg_deleted` |
 
