@@ -137,6 +137,7 @@ def main() -> int:
             print(f"  Pre-reboot uptime: {pre_uptime:.0f}s", file=sys.stderr)
 
         print(f"Rebooting instance {args.instance_id}...", file=sys.stderr)
+        reboot_requested_at = time.time()
         ec2.reboot_instances(InstanceIds=[args.instance_id])
         result["reboot_initiated"] = True
         print("  Reboot API call succeeded", file=sys.stderr)
@@ -195,7 +196,14 @@ def main() -> int:
         result["uptime_seconds"] = round(post_uptime, 1)
         print(f"  Post-reboot uptime: {post_uptime:.0f}s", file=sys.stderr)
 
-        if pre_uptime is not None and post_uptime < pre_uptime:
+        # Primary proof: boot timestamp is after our reboot request.
+        # More reliable than uptime comparison — works even when pre_uptime
+        # couldn't be sampled or the machine had a short uptime before reboot.
+        boot_started_at = time.time() - post_uptime
+        if boot_started_at >= reboot_requested_at:
+            result["reboot_confirmed"] = True
+            print("  Reboot confirmed (boot time is after reboot request)", file=sys.stderr)
+        elif pre_uptime is not None and post_uptime < pre_uptime:
             result["reboot_confirmed"] = True
             print("  Reboot confirmed (uptime reset)", file=sys.stderr)
         elif pre_uptime is not None:
@@ -205,9 +213,6 @@ def main() -> int:
                 file=sys.stderr,
             )
         else:
-            # No pre-reboot sample means no proof. A fresh instance trivially
-            # sits below any wall-clock threshold, so the old `< 600s`
-            # heuristic is a false-positive waiting to happen.
             result["reboot_confirmed"] = False
             result["error"] = "Could not sample pre-reboot uptime via SSH (cannot affirm reboot)"
             print(

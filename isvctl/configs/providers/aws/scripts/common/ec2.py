@@ -27,7 +27,13 @@ import time
 from pathlib import Path
 from typing import Any
 
-from botocore.exceptions import BotoCoreError, ClientError
+from botocore.exceptions import (
+    ClientError,
+    ConnectionClosedError,
+    ConnectTimeoutError,
+    EndpointConnectionError,
+    ReadTimeoutError,
+)
 
 from common.errors import TRANSIENT_AWS_CODES
 
@@ -114,8 +120,9 @@ def wait_for_public_ip(
             if code not in TRANSIENT_AWS_CODES:
                 raise
             print(f"Warning: describe_instances transient error ({code}): {e}", file=sys.stderr)
-        except BotoCoreError as e:
-            # Network-level failures (EndpointConnectionError, read timeouts, etc.).
+        except (EndpointConnectionError, ConnectTimeoutError, ReadTimeoutError, ConnectionClosedError) as e:
+            # Transport-level failures only — non-network BotoCoreErrors (e.g.
+            # ParamValidationError, NoCredentialsError) should not be swallowed.
             print(f"Warning: describe_instances network error: {e}", file=sys.stderr)
         if time.monotonic() >= deadline:
             return None

@@ -31,10 +31,13 @@ Requires: paramiko
 
 import argparse
 import json
+import re
 import sys
 from typing import Any
 
 import paramiko
+
+_CONTAINER_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 
 
 def ssh_connect(host: str, user: str, key_file: str) -> paramiko.SSHClient:
@@ -67,6 +70,12 @@ def main() -> int:
     parser.add_argument("--container-name", default="isv-nim", help="Docker container name")
     parser.add_argument("--remove-image", action="store_true", help="Also remove the container image")
     args = parser.parse_args()
+
+    if not _CONTAINER_NAME_RE.match(args.container_name):
+        print(
+            json.dumps({"success": False, "error": f"Invalid container name: {args.container_name!r}"}),
+        )
+        return 1
 
     result: dict[str, Any] = {
         "success": False,

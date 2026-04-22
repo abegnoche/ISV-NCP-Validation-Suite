@@ -169,7 +169,7 @@ def main() -> int:
 
     if args.delete_key_pair and key_name:
         try:
-            key_name = sanitize_key_name(key_name)  # U5: reject path-traversal chars
+            key_name = sanitize_key_name(key_name)
             ec2.delete_key_pair(KeyName=key_name)
             result["deleted"]["key_pairs"].append(key_name)
             print(f"  Key pair {key_name}: deleted", file=sys.stderr)
