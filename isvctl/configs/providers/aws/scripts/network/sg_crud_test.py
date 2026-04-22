@@ -46,7 +46,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import boto3
 from botocore.exceptions import ClientError
-from common.errors import handle_aws_errors
+from common.errors import delete_with_retry, handle_aws_errors
 from common.vpc import create_test_vpc
 
 logger = logging.getLogger(__name__)
@@ -327,17 +327,21 @@ def main() -> int:
     except Exception as e:
         result["error"] = str(e)
     finally:
-        # Cleanup: delete SG if still exists, then VPC
+        # Cleanup: delete SG if still exists, then VPC. Route through
+        # delete_with_retry so a transient error (throttling, connection
+        # reset) does not orphan the resource on a single-shot delete.
         if sg_id:
-            try:
-                ec2.delete_security_group(GroupId=sg_id)
-            except ClientError:
-                logger.exception("Failed to delete security group %s during cleanup", sg_id)
+            delete_with_retry(
+                ec2.delete_security_group,
+                GroupId=sg_id,
+                resource_desc=f"security group {sg_id}",
+            )
         if vpc_id:
-            try:
-                ec2.delete_vpc(VpcId=vpc_id)
-            except ClientError:
-                logger.exception("Failed to delete VPC %s during cleanup", vpc_id)
+            delete_with_retry(
+                ec2.delete_vpc,
+                VpcId=vpc_id,
+                resource_desc=f"VPC {vpc_id}",
+            )
 
     print(json.dumps(result, indent=2))
     return 0 if result["success"] else 1

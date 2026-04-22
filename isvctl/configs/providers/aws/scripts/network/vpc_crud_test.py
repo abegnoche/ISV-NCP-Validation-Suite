@@ -40,12 +40,12 @@ sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent.parent))
 
 import boto3
 from botocore.exceptions import ClientError
-from common.errors import handle_aws_errors
+from common.errors import delete_with_retry, handle_aws_errors
 
 
 def test_create_vpc(ec2: Any, cidr: str, name: str) -> dict[str, Any]:
     """Test VPC creation."""
-    result = {"passed": False}
+    result: dict[str, Any] = {"passed": False}
     try:
         vpc = ec2.create_vpc(CidrBlock=cidr)
         vpc_id = vpc["Vpc"]["VpcId"]
@@ -242,12 +242,14 @@ def main() -> int:
     except Exception as e:
         result["error"] = str(e)
     finally:
-        # Cleanup if VPC still exists
+        # Cleanup if VPC still exists — retry on transient errors so a
+        # connection reset or throttle doesn't leak the test VPC.
         if vpc_id:
-            try:
-                ec2.delete_vpc(VpcId=vpc_id)
-            except ClientError:
-                pass
+            delete_with_retry(
+                ec2.delete_vpc,
+                VpcId=vpc_id,
+                resource_desc=f"VPC {vpc_id}",
+            )
 
     print(json.dumps(result, indent=2))
     return 0 if result["success"] else 1
