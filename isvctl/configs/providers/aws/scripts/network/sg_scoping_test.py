@@ -60,6 +60,7 @@ def test_workload_or_node_scoping(ec2: Any, vpc_id: str, az: str, scope: str) ->
     subnet_id = None
     eni_target = None
     eni_other = None
+    cleanup_errors: list[str] = []
     tag = f"isv-sg-scope-{scope}-{uuid.uuid4().hex[:6]}"
 
     apply_key = f"apply_{scope}_rule"
@@ -127,20 +128,22 @@ def test_workload_or_node_scoping(ec2: Any, vpc_id: str, az: str, scope: str) ->
             if eni_id:
                 try:
                     ec2.delete_network_interface(NetworkInterfaceId=eni_id)
-                except ClientError:
-                    pass
+                except ClientError as e:
+                    cleanup_errors.append(f"delete ENI {eni_id}: {e}")
         if subnet_id:
             try:
                 ec2.delete_subnet(SubnetId=subnet_id)
-            except ClientError:
-                pass
+            except ClientError as e:
+                cleanup_errors.append(f"delete subnet {subnet_id}: {e}")
         if sg_id:
             try:
                 ec2.delete_security_group(GroupId=sg_id)
-            except ClientError:
-                pass
+            except ClientError as e:
+                cleanup_errors.append(f"delete SG {sg_id}: {e}")
 
-    results["cleanup"] = {"passed": True}
+    results["cleanup"] = {"passed": not cleanup_errors}
+    if cleanup_errors:
+        results["cleanup"]["error"] = "; ".join(cleanup_errors)
     return results
 
 
@@ -150,6 +153,7 @@ def test_subnet_scoping(ec2: Any, vpc_id: str, az: str) -> dict[str, Any]:
     subnet_a = None
     subnet_b = None
     nacl_id = None
+    cleanup_errors: list[str] = []
 
     try:
         # Subnet scoping in AWS is enforced by NACLs rather than SGs; record
@@ -221,21 +225,23 @@ def test_subnet_scoping(ec2: Any, vpc_id: str, az: str) -> dict[str, Any]:
                             AssociationId=assoc,
                             NetworkAclId=default_nacl,
                         )
-            except ClientError:
-                pass
+            except ClientError as e:
+                cleanup_errors.append(f"restore default NACL for {subnet_a}: {e}")
         if nacl_id:
             try:
                 ec2.delete_network_acl(NetworkAclId=nacl_id)
-            except ClientError:
-                pass
+            except ClientError as e:
+                cleanup_errors.append(f"delete NACL {nacl_id}: {e}")
         for sid in [subnet_a, subnet_b]:
             if sid:
                 try:
                     ec2.delete_subnet(SubnetId=sid)
-                except ClientError:
-                    pass
+                except ClientError as e:
+                    cleanup_errors.append(f"delete subnet {sid}: {e}")
 
-    results["cleanup"] = {"passed": True}
+    results["cleanup"] = {"passed": not cleanup_errors}
+    if cleanup_errors:
+        results["cleanup"]["error"] = "; ".join(cleanup_errors)
     return results
 
 

@@ -164,11 +164,15 @@ def build_catalog() -> list[dict[str, Any]]:
             "markers": markers,
             "module": cls.__module__,
         }
-        # Infer platforms from markers for classes not already covered by configs
-        for marker in markers:
-            platform = MARKER_TO_PLATFORM.get(marker)
-            if platform:
-                platform_map.setdefault(cls.__name__, set()).add(platform)
+        # Infer platforms from markers only for checks not already covered by
+        # canonical configs. Some markers (for example "security") are useful
+        # pytest filters but are not reliable platform ownership signals once a
+        # check appears in a suite file.
+        if cls.__name__ not in platform_map:
+            for marker in markers:
+                platform = MARKER_TO_PLATFORM.get(marker)
+                if platform:
+                    platform_map.setdefault(cls.__name__, set()).add(platform)
 
     catalog: list[dict[str, Any]] = []
     seen: set[str] = set()

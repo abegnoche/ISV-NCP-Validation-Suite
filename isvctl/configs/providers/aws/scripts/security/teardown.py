@@ -33,9 +33,25 @@ from botocore.exceptions import ClientError
 from common.errors import handle_aws_errors
 
 
+def _user_has_isvtest_tag(iam: Any, username: str) -> bool:
+    """Return True when the IAM user is tagged as owned by isvtest."""
+    try:
+        kwargs: dict[str, Any] = {"UserName": username}
+        while True:
+            response = iam.list_user_tags(**kwargs)
+            for tag in response.get("Tags", []):
+                if tag.get("Key") == "CreatedBy" and tag.get("Value") == "isvtest":
+                    return True
+            if not response.get("IsTruncated"):
+                return False
+            kwargs["Marker"] = response.get("Marker")
+    except ClientError:
+        return False
+
+
 @handle_aws_errors
 def main() -> int:
-    """Clean up leftover security test resources (isv-sa-test-* IAM users)."""
+    """Clean up leftover security test resources created by isvtest."""
     parser = argparse.ArgumentParser(description="Security test teardown")
     parser.add_argument("--region", default=os.environ.get("AWS_REGION", "us-west-2"))
     parser.add_argument("--skip-destroy", action="store_true")
@@ -55,6 +71,7 @@ def main() -> int:
 
     iam = boto3.client("iam", region_name=args.region)
     cleaned = 0
+    skipped_unowned = 0
 
     try:
         paginator = iam.get_paginator("list_users")
@@ -62,6 +79,9 @@ def main() -> int:
             for user in page["Users"]:
                 name = user["UserName"]
                 if not name.startswith("isv-sa-test-"):
+                    continue
+                if not _user_has_isvtest_tag(iam, name):
+                    skipped_unowned += 1
                     continue
                 # Delete access keys first
                 try:
@@ -78,6 +98,7 @@ def main() -> int:
 
         result["success"] = True
         result["resources_cleaned"] = cleaned
+        result["resources_skipped_unowned"] = skipped_unowned
     except ClientError as e:
         result["error"] = str(e)
 

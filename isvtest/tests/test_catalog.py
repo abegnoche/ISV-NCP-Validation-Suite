@@ -71,6 +71,15 @@ class TestBuildCatalog:
             assert "." in entry["module"]
             assert entry["module"].startswith("isvtest.")
 
+    def test_platforms_come_from_suites_before_filter_markers(self) -> None:
+        """Test that feature markers do not add extra platform ownership."""
+        catalog = build_catalog()
+        by_name = {entry["name"]: entry for entry in catalog}
+
+        assert by_name["SgCrudCheck"]["platforms"] == ["NETWORK"]
+        assert by_name["BmcTenantIsolationCheck"]["platforms"] == ["SECURITY"]
+        assert by_name["ServiceAccountCredentialCheck"]["platforms"] == ["SECURITY"]
+
 
 class TestGetCatalogVersion:
     """Tests for get_catalog_version function."""

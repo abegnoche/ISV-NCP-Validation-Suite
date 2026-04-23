@@ -37,6 +37,7 @@ Output JSON:
 """
 
 import argparse
+import ipaddress
 import json
 import os
 import sys
@@ -76,13 +77,7 @@ def _check_vpc_endpoints_private(endpoints: list[dict[str, Any]]) -> dict[str, A
 
 
 def _check_eks_private(region: str) -> dict[str, Any]:
-    """Verify EKS clusters are not public-only (no private endpoint fallback).
-
-    Dual-stack clusters (endpointPublicAccess + endpointPrivateAccess both
-    true) are accepted — these use CIDR allowlists to restrict public access
-    while keeping private access as fallback.  Only clusters with public
-    access enabled and NO private access are flagged.
-    """
+    """Verify EKS clusters are not public-only or wide open to the internet."""
     try:
         eks = boto3.client("eks", region_name=region)
         clusters = eks.list_clusters()["clusters"]
@@ -96,16 +91,20 @@ def _check_eks_private(region: str) -> dict[str, Any]:
         return {"passed": True, "message": "No EKS clusters in region"}
 
     public_only: list[str] = []
+    wide_open_public: list[str] = []
     describe_errors: list[str] = []
     for name in clusters:
         try:
             cluster = eks.describe_cluster(name=name)["cluster"]
             endpoint_cfg = cluster.get("resourcesVpcConfig", {})
-            # Flag clusters that are public-only (no private fallback).
-            # Dual-stack (public + private) with CIDR allowlists is a
-            # legitimate production pattern and should not be flagged.
-            if endpoint_cfg.get("endpointPublicAccess", True) and not endpoint_cfg.get("endpointPrivateAccess", False):
+            public_access = endpoint_cfg.get("endpointPublicAccess", True)
+            private_access = endpoint_cfg.get("endpointPrivateAccess", False)
+            public_cidrs = endpoint_cfg.get("publicAccessCidrs") or ["0.0.0.0/0"]
+
+            if public_access and not private_access:
                 public_only.append(name)
+            elif public_access and any(_is_world_open_cidr(cidr) for cidr in public_cidrs):
+                wide_open_public.append(f"{name}: {public_cidrs}")
         except ClientError as e:
             describe_errors.append(f"{name}: {e}")
 
@@ -121,10 +120,24 @@ def _check_eks_private(region: str) -> dict[str, Any]:
             "error": f"EKS clusters with public-only endpoint (no private access): {public_only}",
         }
 
+    if wide_open_public:
+        return {
+            "passed": False,
+            "error": f"EKS clusters with public endpoint open to the internet: {wide_open_public}",
+        }
+
     return {
         "passed": True,
-        "message": f"{len(clusters)} EKS cluster(s) have private endpoint access",
+        "message": f"{len(clusters)} EKS cluster(s) are private-only or have restricted public CIDRs",
     }
+
+
+def _is_world_open_cidr(cidr: str) -> bool:
+    """Return True when a CIDR covers the entire IPv4 or IPv6 internet."""
+    try:
+        return ipaddress.ip_network(cidr, strict=False).prefixlen == 0
+    except ValueError:
+        return False
 
 
 def _check_api_not_public_dns(endpoints: list[dict[str, Any]]) -> dict[str, Any]:
