@@ -46,7 +46,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import boto3
 from botocore.exceptions import ClientError
-from common.errors import handle_aws_errors
+from common.errors import delete_with_retry, handle_aws_errors
 from common.vpc import create_test_vpc
 
 logger = logging.getLogger(__name__)
@@ -327,17 +327,33 @@ def main() -> int:
     except Exception as e:
         result["error"] = str(e)
     finally:
-        # Cleanup: delete SG if still exists, then VPC
+        # Cleanup: delete SG if still exists, then VPC. Route through
+        # delete_with_retry so a transient error (throttling, connection
+        # reset) does not orphan the resource on a single-shot delete.
+        # Capture the return value so a failed SG cleanup doesn't make us
+        # attempt the VPC delete (which will fail on SG dependency) and
+        # doesn't silently coexist with result["success"] = True.
+        sg_deleted = True
         if sg_id:
-            try:
-                ec2.delete_security_group(GroupId=sg_id)
-            except ClientError:
-                logger.exception("Failed to delete security group %s during cleanup", sg_id)
+            sg_deleted = delete_with_retry(
+                ec2.delete_security_group,
+                GroupId=sg_id,
+                resource_desc=f"security group {sg_id}",
+            )
+            if not sg_deleted:
+                result.setdefault("cleanup_errors", []).append(f"security group {sg_id}")
         if vpc_id:
-            try:
-                ec2.delete_vpc(VpcId=vpc_id)
-            except ClientError:
-                logger.exception("Failed to delete VPC %s during cleanup", vpc_id)
+            if not sg_deleted:
+                result.setdefault("cleanup_errors", []).append(f"skipped VPC {vpc_id} delete because SG cleanup failed")
+            elif not delete_with_retry(
+                ec2.delete_vpc,
+                VpcId=vpc_id,
+                resource_desc=f"VPC {vpc_id}",
+            ):
+                result.setdefault("cleanup_errors", []).append(f"VPC {vpc_id}")
+        if result.get("cleanup_errors"):
+            result["success"] = False
+            result["status"] = "failed"
 
     print(json.dumps(result, indent=2))
     return 0 if result["success"] else 1

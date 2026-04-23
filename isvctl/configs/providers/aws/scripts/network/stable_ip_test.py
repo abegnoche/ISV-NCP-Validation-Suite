@@ -42,9 +42,9 @@ from typing import Any
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent.parent))
 
 import boto3
-from botocore.exceptions import ClientError
+from botocore.exceptions import ClientError, WaiterError
 from common.ec2 import get_amazon_linux_ami
-from common.errors import handle_aws_errors
+from common.errors import delete_with_retry, handle_aws_errors
 from common.vpc import create_test_vpc, delete_vpc
 
 
@@ -255,22 +255,33 @@ def main() -> int:
         result["error"] = str(e)
     finally:
         if instance_id:
-            try:
-                ec2.terminate_instances(InstanceIds=[instance_id])
-                ec2.get_waiter("instance_terminated").wait(InstanceIds=[instance_id])
-            except ClientError:
-                pass
+            # terminate_instances + waiter wait is a single best-effort unit;
+            # retry covers the terminate API call, then wait for settle.
+            if delete_with_retry(
+                ec2.terminate_instances,
+                InstanceIds=[instance_id],
+                resource_desc=f"instance {instance_id}",
+            ):
+                try:
+                    ec2.get_waiter("instance_terminated").wait(InstanceIds=[instance_id])
+                except (ClientError, WaiterError):
+                    # WaiterError fires on timeout or terminal-failure state; if
+                    # we let it escape, the finally block exits early and leaks
+                    # the SG, subnet, and VPC that still need cleanup below.
+                    pass
             time.sleep(5)
         if sg_id:
-            try:
-                ec2.delete_security_group(GroupId=sg_id)
-            except ClientError:
-                pass
+            delete_with_retry(
+                ec2.delete_security_group,
+                GroupId=sg_id,
+                resource_desc=f"security group {sg_id}",
+            )
         if subnet_id:
-            try:
-                ec2.delete_subnet(SubnetId=subnet_id)
-            except ClientError:
-                pass
+            delete_with_retry(
+                ec2.delete_subnet,
+                SubnetId=subnet_id,
+                resource_desc=f"subnet {subnet_id}",
+            )
         if vpc_id:
             delete_vpc(ec2, vpc_id)
 

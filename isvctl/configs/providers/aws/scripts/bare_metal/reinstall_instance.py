@@ -24,7 +24,7 @@ this script performs the equivalent manually:
 
 Usage:
     python reinstall_instance.py --instance-id i-xxx --region us-west-2 \
-        --key-file /tmp/key.pem --public-ip 54.x.x.x
+        --key-file /tmp/key.pem
 
 Output JSON:
 {
@@ -47,9 +47,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # providers/aws/scripts/ (for common.*)
 import boto3
 from botocore.exceptions import ClientError, WaiterError
+from common.ec2 import wait_for_public_ip
 from common.ssh_utils import wait_for_ssh
 
 
@@ -90,7 +91,6 @@ def main() -> int:
     parser.add_argument("--instance-id", required=True, help="EC2 instance ID")
     parser.add_argument("--region", default=os.environ.get("AWS_REGION", "us-west-2"))
     parser.add_argument("--key-file", required=True, help="Path to SSH private key")
-    parser.add_argument("--public-ip", required=True, help="Instance public IP")
     parser.add_argument("--ssh-user", default="ubuntu", help="SSH username")
     parser.add_argument("--ami-id", help="AMI ID to reinstall from (default: instance's current AMI)")
     parser.add_argument(
@@ -238,10 +238,16 @@ def main() -> int:
         instance = instances["Reservations"][0]["Instances"][0]
 
         result["state"] = instance["State"]["Name"]
-        result["public_ip"] = instance.get("PublicIpAddress")
         result["private_ip"] = instance.get("PrivateIpAddress")
 
-        public_ip = result["public_ip"] or args.public_ip
+        # Poll for the fresh public IP; do not fall back to a caller-supplied
+        # value — IPs are released on stop on NCPs and would be stale.
+        public_ip = instance.get("PublicIpAddress") or wait_for_public_ip(ec2, args.instance_id)
+        if not public_ip:
+            result["error"] = "Instance has no public IP after reinstall (timed out polling)"
+            print(json.dumps(result, indent=2))
+            return 1
+        result["public_ip"] = public_ip
 
         # Step 9: Wait for SSH
         print("Waiting for SSH after reinstall...", file=sys.stderr)

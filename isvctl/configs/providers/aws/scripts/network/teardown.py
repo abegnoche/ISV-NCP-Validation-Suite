@@ -31,6 +31,7 @@ Output JSON:
 
 import argparse
 import json
+import logging
 import os
 import sys
 import time
@@ -41,7 +42,10 @@ sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent.parent))
 
 import boto3
 from botocore.exceptions import ClientError
+from common.ec2 import sanitize_key_name
 from common.errors import handle_aws_errors
+
+logger = logging.getLogger(__name__)
 
 
 def delete_with_retry(func, resource_type: str, max_retries: int = 5, **kwargs) -> bool:
@@ -69,18 +73,29 @@ def delete_with_retry(func, resource_type: str, max_retries: int = 5, **kwargs) 
 
 
 def cleanup_key_pairs(ec2: Any, key_names: list[str]) -> list[str]:
-    """Delete key pairs by exact name (AWS + local PEM files)."""
+    """Delete key pairs by exact name (AWS + local PEM files).
+
+    AWS key pair names allow any printable ASCII up to 255 chars, so pass
+    the raw name to EC2. Sanitization is only needed when composing the
+    local ``/tmp/<name>.pem`` path, where a crafted name could traverse.
+    """
     deleted = []
-    for key_name in key_names:
+    for raw_name in key_names:
         try:
-            ec2.describe_key_pairs(KeyNames=[key_name])
-            ec2.delete_key_pair(KeyName=key_name)
-            deleted.append(key_name)
+            ec2.describe_key_pairs(KeyNames=[raw_name])
+            ec2.delete_key_pair(KeyName=raw_name)
+            deleted.append(raw_name)
         except ClientError as e:
             if e.response["Error"]["Code"] != "InvalidKeyPair.NotFound":
                 raise
+
         # Clean up local PEM file (0400 permissions require chmod first)
-        pem_path = Path(f"/tmp/{key_name}.pem")
+        try:
+            safe_name = sanitize_key_name(raw_name)
+        except ValueError as e:
+            logger.warning("Key pair %r deleted but local PEM filename is unsafe: %s", raw_name, e)
+            continue
+        pem_path = Path(f"/tmp/{safe_name}.pem")
         if pem_path.exists():
             pem_path.chmod(0o600)
             pem_path.unlink()

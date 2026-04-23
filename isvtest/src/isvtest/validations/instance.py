@@ -62,7 +62,13 @@ class InstanceRebootCheck(BaseValidation):
     - reboot_initiated: True (API call succeeded)
     - state: "running" (instance recovered)
     - ssh_ready: True (SSH connectivity restored)
-    - uptime_seconds: Low value (proves reboot actually occurred)
+    - reboot_confirmed: True (stub must affirmatively prove the reboot
+      happened, e.g. via post-reboot uptime < pre-reboot uptime)
+
+    An absent or non-True ``reboot_confirmed`` FAILS the check. Silent
+    SSH/uptime-sampling failures in the stub would otherwise let runs pass
+    without proving a reboot actually occurred, so this check requires an
+    affirmative ``True`` rather than treating absence as success.
 
     Config:
         step_output: The reboot step output to check
@@ -74,7 +80,7 @@ class InstanceRebootCheck(BaseValidation):
         state: Instance state after reboot
         ssh_ready: Whether SSH is accessible after reboot
         uptime_seconds: System uptime after reboot
-        reboot_confirmed: Whether uptime comparison confirms reboot
+        reboot_confirmed: Whether uptime comparison confirms reboot — REQUIRED True
     """
 
     description: ClassVar[str] = "Check instance rebooted successfully"
@@ -117,8 +123,13 @@ class InstanceRebootCheck(BaseValidation):
             )
             return
 
-        if reboot_confirmed is False:
-            self.set_failed(f"Instance {instance_id} reboot not confirmed by uptime comparison")
+        # Require an affirmative True. Treating absence as success lets a
+        # stub silently pass whenever the post-reboot uptime sample flakes.
+        if reboot_confirmed is not True:
+            self.set_failed(
+                f"Instance {instance_id} reboot not affirmatively confirmed "
+                f"(reboot_confirmed={reboot_confirmed!r}); stub must emit an explicit True"
+            )
             return
 
         uptime_str = f", uptime={uptime:.0f}s" if uptime is not None else ""

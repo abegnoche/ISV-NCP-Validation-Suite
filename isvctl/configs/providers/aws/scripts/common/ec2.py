@@ -12,18 +12,121 @@
 
 Provides common EC2 operations used across VM and ISO launch scripts:
 - Key pair creation with idempotent handling
+- Key-name sanitization (prevents path traversal)
 - Security group creation with SSH ingress
 - Availability zone support detection
 - Default VPC and subnet discovery
+- Post-transition public-IP polling (no stale-IP fallback)
 """
 
 from __future__ import annotations
 
+import re
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
-from botocore.exceptions import ClientError
+from botocore.exceptions import (
+    ClientError,
+    ConnectionClosedError,
+    ConnectTimeoutError,
+    EndpointConnectionError,
+    ReadTimeoutError,
+)
+
+from common.errors import TRANSIENT_AWS_CODES
+
+# Conservative key-name pattern — letters, digits, dash, underscore, dot.
+# Deliberately excludes '/' and '..' to prevent path traversal when the
+# name is composed into a filesystem path like /tmp/{key_name}.pem
+# Length cap matches EC2's 255-char limit.
+_KEY_NAME_RE = re.compile(r"[A-Za-z0-9_.-]{1,255}")
+
+
+def sanitize_key_name(key_name: str) -> str:
+    """Validate ``key_name`` is safe to compose into a filesystem path.
+
+    AWS key pair names are a CLI-supplied string that several stubs
+    concatenate into ``/tmp/{key_name}.pem`` (and similar). A name like
+    ``../etc/passwd`` or ``foo/bar`` would escape ``/tmp`` and read or
+    unlink files outside the intended scope. This is low-severity on a
+    dedicated test box but real on a dev machine or shared runner.
+
+    Reject anything outside ``[A-Za-z0-9_.-]`` with a clear error. Returns
+    ``key_name`` unchanged on success so callers can use it inline:
+
+        pem_path = Path(f"/tmp/{sanitize_key_name(args.key_name)}.pem")
+
+    Args:
+        key_name: The proposed key-pair name.
+
+    Returns:
+        The same ``key_name`` if valid.
+
+    Raises:
+        ValueError: If ``key_name`` contains characters outside the
+            allowed set or is empty / too long.
+    """
+    if not key_name or not _KEY_NAME_RE.fullmatch(key_name):
+        raise ValueError(
+            f"invalid key name {key_name!r}: must match [A-Za-z0-9_.-] "
+            "(1-255 chars). Rejected to prevent path traversal when composed "
+            "into /tmp/<name>.pem."
+        )
+    return key_name
+
+
+def wait_for_public_ip(
+    ec2: Any,
+    instance_id: str,
+    *,
+    timeout: int = 120,
+    interval: int = 5,
+) -> str | None:
+    """Poll ``describe_instances`` until the instance has a non-null public IP.
+
+    AWS preserves the public IP across stop/start, so post-transition stubs
+    historically fell back to the pre-stop IP passed on the CLI. On NCPs
+    that release the ephemeral IP on stop (GCP is the most common), that
+    fallback silently masks a stale IP. The defensive default is to poll
+    the describe API and never trust a pre-stop value.
+
+    Args:
+        ec2: Boto3 EC2 client.
+        instance_id: Instance to poll.
+        timeout: Total seconds to wait before giving up.
+        interval: Seconds between describe calls.
+
+    Returns:
+        The fresh public IP string, or None if the instance still has no
+        public IP after ``timeout`` seconds (caller decides how to surface).
+    """
+    deadline = time.monotonic() + timeout
+    while True:
+        try:
+            resp = ec2.describe_instances(InstanceIds=[instance_id])
+            reservations = resp.get("Reservations", [])
+            instances = reservations[0].get("Instances", []) if reservations else []
+            public_ip = instances[0].get("PublicIpAddress") if instances else None
+            if public_ip:
+                return public_ip
+        except ClientError as e:
+            # Only swallow throttling / server-side transient codes. Terminal
+            # errors (InvalidInstanceID.NotFound, AuthFailure, AccessDenied)
+            # must surface — hiding them behind the timeout makes bad configs
+            # look like slow IP assignment.
+            code = e.response.get("Error", {}).get("Code", "")
+            if code not in TRANSIENT_AWS_CODES:
+                raise
+            print(f"Warning: describe_instances transient error ({code}): {e}", file=sys.stderr)
+        except (EndpointConnectionError, ConnectTimeoutError, ReadTimeoutError, ConnectionClosedError) as e:
+            # Transport-level failures only — non-network BotoCoreErrors (e.g.
+            # ParamValidationError, NoCredentialsError) should not be swallowed.
+            print(f"Warning: describe_instances network error: {e}", file=sys.stderr)
+        if time.monotonic() >= deadline:
+            return None
+        time.sleep(interval)
 
 
 def get_supported_azs(ec2: Any, instance_type: str) -> set[str]:
@@ -93,6 +196,20 @@ def get_default_vpc_and_subnets(
     return vpc_id, subnet_list
 
 
+_ISV_CREATED_BY_TAG = {"Key": "CreatedBy", "Value": "isvtest"}
+
+
+def _has_isv_tag(tags: list[dict[str, str]] | None) -> bool:
+    """Return True if ``tags`` includes the ``CreatedBy=isvtest`` marker.
+
+    Used as a verified-reuse signal: existing resources without this tag
+    were created by something outside the suite and must not be adopted.
+    """
+    if not tags:
+        return False
+    return any(t.get("Key") == "CreatedBy" and t.get("Value") == "isvtest" for t in tags)
+
+
 def create_key_pair(
     ec2: Any,
     key_name: str,
@@ -100,9 +217,12 @@ def create_key_pair(
 ) -> str:
     """Create EC2 key pair and save the private key to a file.
 
-    If a key pair with the same name already exists and the local file is
-    present, returns the existing file path. If the key exists but the file
-    is missing, deletes and recreates the key pair.
+    Reuse is explicit and verified: if a key pair with the same name already
+    exists on AWS, the local PEM file must also exist and the AWS-side key
+    must carry the suite's ``CreatedBy=isvtest`` tag. If the tag is missing
+    the key belongs to some other caller and we raise rather than silently
+    adopt it. If the local PEM is missing we recreate (the AWS-side key is
+    useless without the private material and was ours to begin with).
 
     Args:
         ec2: Boto3 EC2 client.
@@ -114,8 +234,12 @@ def create_key_pair(
         Path to the .pem key file.
 
     Raises:
-        RuntimeError: If key pair creation fails.
+        RuntimeError: If key pair creation fails, or if an existing key by
+            the same name lacks the suite's ownership tag (verified-reuse
+            check failed).
     """
+    key_name = sanitize_key_name(key_name)
+
     if key_dir is None:
         key_dir = Path("/tmp")
     else:
@@ -123,13 +247,22 @@ def create_key_pair(
 
     key_path = key_dir / f"{key_name}.pem"
 
-    # Check if key already exists
+    # Check if key already exists — verify shape before reusing.
     try:
-        ec2.describe_key_pairs(KeyNames=[key_name])
-        # Key exists - if we have the file locally, reuse it
-        if key_path.exists():
+        describe = ec2.describe_key_pairs(KeyNames=[key_name])
+        existing = describe.get("KeyPairs", [{}])[0]
+        if not _has_isv_tag(existing.get("Tags")):
+            raise RuntimeError(
+                f"key pair {key_name!r} already exists on AWS but is not tagged "
+                "CreatedBy=isvtest — refusing to adopt a resource this suite "
+                "did not create. Either "
+                "delete it manually or use a different --key-name."
+            )
+        # Tag matches — verified reuse. If we have the file locally, reuse it.
+        if key_path.exists() and key_path.stat().st_size > 0:
             return str(key_path)
-        # Key exists but no local file - delete and recreate
+        # Tag matches but local PEM is missing/empty — ours but unrecoverable;
+        # safe to delete and recreate.
         ec2.delete_key_pair(KeyName=key_name)
     except ClientError as e:
         if e.response["Error"]["Code"] != "InvalidKeyPair.NotFound":
@@ -144,7 +277,7 @@ def create_key_pair(
                     "ResourceType": "key-pair",
                     "Tags": [
                         {"Key": "Name", "Value": key_name},
-                        {"Key": "CreatedBy", "Value": "isvtest"},
+                        _ISV_CREATED_BY_TAG,
                     ],
                 }
             ],
@@ -164,6 +297,22 @@ def create_key_pair(
     return str(key_path)
 
 
+def _sg_has_ssh_rule(ip_permissions: list[dict[str, Any]] | None) -> bool:
+    """Return True if the ingress rule set includes the expected SSH rule
+    (tcp/22 from 0.0.0.0/0). Used as a shape check on reuse."""
+    if not ip_permissions:
+        return False
+    for perm in ip_permissions:
+        if (
+            perm.get("IpProtocol") == "tcp"
+            and perm.get("FromPort") == 22
+            and perm.get("ToPort") == 22
+            and any(r.get("CidrIp") == "0.0.0.0/0" for r in perm.get("IpRanges", []))
+        ):
+            return True
+    return False
+
+
 def create_security_group(
     ec2: Any,
     vpc_id: str,
@@ -172,8 +321,11 @@ def create_security_group(
 ) -> str:
     """Create a security group allowing SSH ingress, or return existing one.
 
-    If a security group with the same name already exists in the VPC,
-    returns its ID instead of raising an error.
+    Reuse is explicit and verified: if a security group with the same name
+    already exists in the VPC, we describe it and verify the invariants the
+    caller expects — CreatedBy=isvtest tag, description match, and the
+    required SSH ingress rule. If any differs, raise rather than silently
+    adopt a resource whose shape may not match what the caller needs.
 
     Args:
         ec2: Boto3 EC2 client.
@@ -185,6 +337,9 @@ def create_security_group(
         Security group ID.
 
     Raises:
+        RuntimeError: If an existing SG by the same name fails the
+            verified-reuse checks (missing ownership tag, wrong description,
+            or missing expected SSH ingress rule).
         ClientError: For AWS API errors other than duplicate group.
     """
     try:
@@ -197,7 +352,7 @@ def create_security_group(
                     "ResourceType": "security-group",
                     "Tags": [
                         {"Key": "Name", "Value": name},
-                        {"Key": "CreatedBy", "Value": "isvtest"},
+                        _ISV_CREATED_BY_TAG,
                     ],
                 }
             ],
@@ -219,16 +374,43 @@ def create_security_group(
         print(f"Created security group: {sg_id}", file=sys.stderr)
         return sg_id
     except ClientError as e:
-        if e.response["Error"]["Code"] == "InvalidGroup.Duplicate":
-            sgs = ec2.describe_security_groups(
-                Filters=[
-                    {"Name": "group-name", "Values": [name]},
-                    {"Name": "vpc-id", "Values": [vpc_id]},
-                ]
+        if e.response["Error"]["Code"] != "InvalidGroup.Duplicate":
+            raise
+
+        sgs = ec2.describe_security_groups(
+            Filters=[
+                {"Name": "group-name", "Values": [name]},
+                {"Name": "vpc-id", "Values": [vpc_id]},
+            ]
+        )
+        if not sgs["SecurityGroups"]:
+            # Duplicate error claims it exists but describe can't find it —
+            # propagate the original error rather than silently swallow.
+            raise
+
+        existing = sgs["SecurityGroups"][0]
+        sg_id = existing["GroupId"]
+
+        # Verified-reuse checks — any mismatch raises rather than silently
+        # adopting a resource whose shape we didn't enforce.
+        if not _has_isv_tag(existing.get("Tags")):
+            raise RuntimeError(
+                f"security group {name!r} in VPC {vpc_id} already exists but is not tagged "
+                "CreatedBy=isvtest — refusing to adopt a resource this suite did not "
+                "create."
             )
-            if sgs["SecurityGroups"]:
-                return sgs["SecurityGroups"][0]["GroupId"]
-        raise
+        if existing.get("Description") != description:
+            raise RuntimeError(
+                f"security group {name!r} ({sg_id}) exists but description differs: "
+                f"expected {description!r}, got {existing.get('Description')!r}"
+            )
+        if not _sg_has_ssh_rule(existing.get("IpPermissions")):
+            raise RuntimeError(
+                f"security group {name!r} ({sg_id}) exists but is missing the required "
+                "SSH ingress rule (tcp/22 from 0.0.0.0/0) — refusing to reuse."
+            )
+        print(f"Reusing verified security group: {sg_id}", file=sys.stderr)
+        return sg_id
 
 
 def get_amazon_linux_ami(ec2: Any) -> str | None:

@@ -16,7 +16,7 @@ state with passing status checks, then verifies SSH connectivity.
 
 Usage:
     python start_instance.py --instance-id i-xxx --region us-west-2 \\
-        --key-file /tmp/key.pem --public-ip 54.x.x.x
+        --key-file /tmp/key.pem
 
 Output JSON:
 {
@@ -41,7 +41,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # providers/aws/scripts/ (for common.*)
+from common.ec2 import wait_for_public_ip
 from common.ssh_utils import wait_for_ssh
 
 
@@ -55,7 +56,6 @@ def main() -> int:
     parser.add_argument("--instance-id", required=True, help="EC2 instance ID")
     parser.add_argument("--region", default=os.environ.get("AWS_REGION", "us-west-2"))
     parser.add_argument("--key-file", required=True, help="Path to SSH private key")
-    parser.add_argument("--public-ip", required=True, help="Instance public IP")
     parser.add_argument("--ssh-user", default="ubuntu", help="SSH username")
     args = parser.parse_args()
 
@@ -111,11 +111,22 @@ def main() -> int:
         # ============================================================
         # Step 4: Get updated instance details
         # ============================================================
+        # Poll describe_instances for the fresh public IP. The old
+        # `instance.get("PublicIpAddress") or args.public_ip` fallback
+        # was safe on AWS (IP preserved across stop/start) but would
+        # silently mask a stale IP on NCPs that release the ephemeral
+        # IP on stop (e.g. GCP). Always trust AWS's post-start answer.
         instances = ec2.describe_instances(InstanceIds=[args.instance_id])
         instance = instances["Reservations"][0]["Instances"][0]
         result["state"] = instance["State"]["Name"]
-        result["public_ip"] = instance.get("PublicIpAddress") or args.public_ip
         result["private_ip"] = instance.get("PrivateIpAddress")
+
+        fresh_ip = instance.get("PublicIpAddress") or wait_for_public_ip(ec2, args.instance_id)
+        if not fresh_ip:
+            result["error"] = "Instance has no public IP after start (timed out polling)"
+            print(json.dumps(result, indent=2))
+            return 1
+        result["public_ip"] = fresh_ip
 
         # ============================================================
         # Step 5: Wait for SSH to be ready

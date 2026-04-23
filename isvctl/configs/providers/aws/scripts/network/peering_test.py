@@ -44,7 +44,7 @@ sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent.parent))
 
 import boto3
 from botocore.exceptions import ClientError
-from common.errors import handle_aws_errors
+from common.errors import delete_with_retry, handle_aws_errors
 from common.vpc import create_test_vpc, delete_vpc
 
 
@@ -232,10 +232,11 @@ def main() -> int:
         result["error"] = str(e)
     finally:
         if peering_id:
-            try:
-                ec2.delete_vpc_peering_connection(VpcPeeringConnectionId=peering_id)
-            except ClientError:
-                pass
+            delete_with_retry(
+                ec2.delete_vpc_peering_connection,
+                VpcPeeringConnectionId=peering_id,
+                resource_desc=f"VPC peering connection {peering_id}",
+            )
         if vpc_a_id:
             delete_vpc(ec2, vpc_a_id)
         if vpc_b_id:

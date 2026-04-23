@@ -45,7 +45,8 @@ import time
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # providers/aws/scripts/ (for common.*)
+from common.ec2 import wait_for_public_ip
 from common.ssh_utils import wait_for_ssh
 
 
@@ -154,6 +155,7 @@ def main() -> int:
         # Step 2: Initiate reboot via EC2 API
         # ============================================================
         print(f"Rebooting instance {args.instance_id}...", file=sys.stderr)
+        reboot_requested_at = time.time()
         ec2.reboot_instances(InstanceIds=[args.instance_id])
         result["reboot_initiated"] = True
         print("  Reboot API call succeeded", file=sys.stderr)
@@ -185,10 +187,17 @@ def main() -> int:
         instance = instances["Reservations"][0]["Instances"][0]
 
         result["state"] = instance["State"]["Name"]
-        result["public_ip"] = instance.get("PublicIpAddress")
         result["private_ip"] = instance.get("PrivateIpAddress")
 
-        public_ip = result["public_ip"] or args.public_ip
+        # Poll for a fresh public IP. Dropping the `or args.public_ip`
+        # fallback — safe on AWS (preserves IPs) but silently stale on
+        # NCPs that release the ephemeral IP on stop.
+        public_ip = instance.get("PublicIpAddress") or wait_for_public_ip(ec2, args.instance_id)
+        if not public_ip:
+            result["error"] = "Instance has no public IP after reboot (timed out polling)"
+            print(json.dumps(result, indent=2))
+            return 1
+        result["public_ip"] = public_ip
 
         # ============================================================
         # Step 6: Wait for SSH to be ready
@@ -204,33 +213,53 @@ def main() -> int:
             return 1
 
         # ============================================================
-        # Step 7: Capture post-reboot uptime
+        # Step 7: Capture post-reboot uptime (affirmative reboot proof)
         # ============================================================
+        # Sample post-reboot uptime over SSH; used below to derive boot time.
+        # Always emit reboot_confirmed as an explicit bool so the validator
+        # has an affirmative True to check (rather than treating absence as
+        # success).
         post_uptime = get_uptime_via_ssh(public_ip, args.ssh_user, args.key_file)
-        if post_uptime is not None:
-            result["uptime_seconds"] = round(post_uptime, 1)
-            print(f"  Post-reboot uptime: {post_uptime:.0f}s", file=sys.stderr)
+        if post_uptime is None:
+            result["reboot_confirmed"] = False
+            result["error"] = "Could not sample post-reboot uptime via SSH (cannot affirm reboot)"
+            print("ERROR: post-reboot uptime sample failed; reboot not affirmed", file=sys.stderr)
+            print(json.dumps(result, indent=2))
+            return 1
 
-            # Validate that uptime is lower than pre-reboot (proves reboot happened)
-            if pre_uptime is not None and post_uptime < pre_uptime:
-                result["reboot_confirmed"] = True
-                print("  Reboot confirmed (uptime reset)", file=sys.stderr)
-            elif pre_uptime is not None:
-                result["reboot_confirmed"] = False
-                print(
-                    f"  WARNING: Uptime did not decrease (pre={pre_uptime:.0f}s, post={post_uptime:.0f}s)",
-                    file=sys.stderr,
-                )
-            else:
-                # No pre-reboot uptime to compare against
-                result["reboot_confirmed"] = post_uptime < 600  # <10 min = likely rebooted
-                print(
-                    f"  Reboot likely confirmed (uptime={post_uptime:.0f}s)",
-                    file=sys.stderr,
-                )
+        result["uptime_seconds"] = round(post_uptime, 1)
+        print(f"  Post-reboot uptime: {post_uptime:.0f}s", file=sys.stderr)
 
-        result["success"] = True
-        print("Reboot completed successfully!", file=sys.stderr)
+        # Compare the host's current boot time against when we issued the
+        # reboot API call. If the boot timestamp is later, the kernel booted
+        # after our request — affirmative reboot proof that doesn't depend
+        # on having a pre-reboot uptime sample.
+        boot_started_at = time.time() - post_uptime
+        if boot_started_at >= reboot_requested_at:
+            result["reboot_confirmed"] = True
+            print("  Reboot confirmed (boot time is after reboot request)", file=sys.stderr)
+        elif pre_uptime is not None and post_uptime < pre_uptime:
+            result["reboot_confirmed"] = True
+            print("  Reboot confirmed (uptime reset)", file=sys.stderr)
+        elif pre_uptime is not None:
+            result["reboot_confirmed"] = False
+            print(
+                f"  WARNING: Uptime did not decrease (pre={pre_uptime:.0f}s, post={post_uptime:.0f}s)",
+                file=sys.stderr,
+            )
+        else:
+            result["reboot_confirmed"] = False
+            result["error"] = "Could not sample pre-reboot uptime via SSH (cannot affirm reboot)"
+            print(
+                "WARNING: pre-reboot uptime sample missing; reboot not affirmed",
+                file=sys.stderr,
+            )
+
+        result["success"] = result["reboot_confirmed"]
+        if result["success"]:
+            print("Reboot completed successfully!", file=sys.stderr)
+        else:
+            print("WARNING: reboot could not be affirmed from uptime", file=sys.stderr)
 
     except Exception as e:
         result["error"] = str(e)

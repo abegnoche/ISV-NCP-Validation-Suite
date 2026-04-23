@@ -21,6 +21,8 @@ from typing import Any
 
 from botocore.exceptions import ClientError
 
+from common.errors import delete_with_retry
+
 
 def create_test_vpc(
     ec2: Any,
@@ -71,16 +73,20 @@ def create_test_vpc(
 
 
 def delete_vpc(ec2: Any, vpc_id: str) -> None:
-    """Delete a VPC, ignoring errors if it no longer exists.
+    """Delete a VPC with transient-error retry.
+
+    Routes through :func:`delete_with_retry` so a transient throttling or
+    endpoint-reset does not leak the VPC on the finally-block path.
 
     Args:
         ec2: Boto3 EC2 client.
         vpc_id: VPC ID to delete.
     """
-    try:
-        ec2.delete_vpc(VpcId=vpc_id)
-    except ClientError:
-        pass
+    delete_with_retry(
+        ec2.delete_vpc,
+        VpcId=vpc_id,
+        resource_desc=f"VPC {vpc_id}",
+    )
 
 
 def cleanup_vpc_resources(
@@ -91,9 +97,11 @@ def cleanup_vpc_resources(
     sg_ids: list[str] | None = None,
     nacl_ids: list[str] | None = None,
 ) -> None:
-    """Clean up VPC and associated resources, ignoring individual errors.
+    """Clean up VPC and associated resources with transient-error retry.
 
     Deletes resources in dependency order: SGs -> NACLs -> subnets -> VPC.
+    Every delete goes through :func:`delete_with_retry`, so a transient
+    failure on one resource does not orphan the rest of the dependency tree.
 
     Args:
         ec2: Boto3 EC2 client.
@@ -103,21 +111,24 @@ def cleanup_vpc_resources(
         nacl_ids: Network ACL IDs to delete.
     """
     for sg_id in sg_ids or []:
-        try:
-            ec2.delete_security_group(GroupId=sg_id)
-        except ClientError:
-            pass
+        delete_with_retry(
+            ec2.delete_security_group,
+            GroupId=sg_id,
+            resource_desc=f"security group {sg_id}",
+        )
 
     for nacl_id in nacl_ids or []:
-        try:
-            ec2.delete_network_acl(NetworkAclId=nacl_id)
-        except ClientError:
-            pass
+        delete_with_retry(
+            ec2.delete_network_acl,
+            NetworkAclId=nacl_id,
+            resource_desc=f"network ACL {nacl_id}",
+        )
 
     for subnet_id in subnet_ids or []:
-        try:
-            ec2.delete_subnet(SubnetId=subnet_id)
-        except ClientError:
-            pass
+        delete_with_retry(
+            ec2.delete_subnet,
+            SubnetId=subnet_id,
+            resource_desc=f"subnet {subnet_id}",
+        )
 
     delete_vpc(ec2, vpc_id)

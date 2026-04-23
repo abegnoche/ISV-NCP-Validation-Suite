@@ -42,7 +42,7 @@ sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent.parent))
 
 import boto3
 from botocore.exceptions import ClientError
-from common.errors import handle_aws_errors
+from common.errors import delete_with_retry, handle_aws_errors
 from common.vpc import create_test_vpc, delete_vpc
 
 
@@ -206,13 +206,14 @@ def main() -> int:
         result["error"] = str(e)
     finally:
         if custom_vpc_id:
-            try:
-                # Clean up subnet first
-                sn = result["tests"].get("custom_cidr_subnet", {})
-                if sn.get("subnet_id"):
-                    ec2.delete_subnet(SubnetId=sn["subnet_id"])
-            except ClientError:
-                pass
+            # Clean up subnet first so the VPC delete isn't blocked
+            sn = result["tests"].get("custom_cidr_subnet", {})
+            if sn.get("subnet_id"):
+                delete_with_retry(
+                    ec2.delete_subnet,
+                    SubnetId=sn["subnet_id"],
+                    resource_desc=f"subnet {sn['subnet_id']}",
+                )
             delete_vpc(ec2, custom_vpc_id)
         if standard_vpc_id:
             delete_vpc(ec2, standard_vpc_id)

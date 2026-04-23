@@ -139,9 +139,14 @@ Config (YAML) -> Script (any language) -> JSON output -> Validations (assertions
   this tree as their starting point.
 - `providers/aws/scripts/` - fully implemented AWS reference using boto3/Terraform,
   organized by domain (`aws/scripts/network/`, `aws/scripts/vm/`, `aws/scripts/iam/`, ...).
-- `providers/common/` - shared utilities used across providers (SSH helpers,
-  NIM deploy/teardown). `providers/aws/scripts/common/` holds AWS-only helpers
-  (error handling, EC2/VPC).
+- `providers/shared/` - cross-provider scripts invoked via YAML (`deploy_nim.py`,
+  `teardown_nim.py`). Python helpers imported via `from common.*` live under
+  each provider's scripts/common/, not here.
+- `providers/aws/scripts/common/` - AWS-only Python helpers imported by the
+  stubs: `ec2` (key/SG/public-IP utilities), `errors` (error classification +
+  `delete_with_retry`), `ssh_utils` (`wait_for_ssh`), `serial_console`, `vpc`.
+  Reachable via a single `sys.path.insert(0, Path(__file__).resolve().parents[1])`
+  in each script.
 - Each script is self-contained and can be run manually for debugging.
 
 ### isvtest - Validation Framework
@@ -368,6 +373,6 @@ tests:
 - Provider configs and scripts in `isvctl/configs/providers/` (one folder per provider: `aws/`, `my-isv/`, etc.)
   - `providers/<name>/config/` - YAML wiring that imports a suite and supplies commands
   - `providers/<name>/scripts/` - executable scripts (Python/Bash) that perform the actual work
-- Shared cross-provider utilities in `isvctl/configs/providers/common/`
-- Shared AWS utilities in `isvctl/configs/providers/aws/scripts/common/`
+- Shared cross-provider scripts in `isvctl/configs/providers/shared/`
+- AWS-specific Python helpers in `isvctl/configs/providers/aws/scripts/common/`
 - Schemas in `isvctl/schemas/` (JSON Schema files)

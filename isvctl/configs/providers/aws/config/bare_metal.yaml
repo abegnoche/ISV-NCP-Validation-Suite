@@ -165,8 +165,6 @@ commands:
           - "{{region}}"
           - "--key-file"
           - "{{steps.launch_instance.key_file}}"
-          - "--public-ip"
-          - "{{steps.launch_instance.public_ip}}"
         timeout: 2700
 
       # Reboot instance and validate recovery
@@ -197,8 +195,6 @@ commands:
           - "{{region}}"
           - "--key-file"
           - "{{steps.launch_instance.key_file}}"
-          - "--public-ip"
-          - "{{steps.reboot_instance.public_ip}}"
         timeout: 3600
 
       # Describe instance state - SSH/GPU validation anchor
@@ -230,8 +226,6 @@ commands:
           - "{{region}}"
           - "--key-file"
           - "{{steps.launch_instance.key_file}}"
-          - "--public-ip"
-          - "{{steps.power_cycle_instance.public_ip}}"
         timeout: 3600
 
       # Deploy NIM container via SSH (shared script)
@@ -239,7 +233,7 @@ commands:
       # Uses post-power-cycle IP/key since power-cycle may reassign the public IP
       - name: deploy_nim
         phase: test
-        command: "python3 ../../common/deploy_nim.py"
+        command: "python3 ../../shared/deploy_nim.py"
         args:
           - "--host"
           - "{{steps.power_cycle_instance.public_ip}}"
@@ -251,7 +245,7 @@ commands:
       # Uses post-power-cycle IP/key to match what deploy_nim used
       - name: teardown_nim
         phase: teardown
-        command: "python3 ../../common/teardown_nim.py"
+        command: "python3 ../../shared/teardown_nim.py"
         args:
           - "--host"
           - "{{steps.power_cycle_instance.public_ip}}"

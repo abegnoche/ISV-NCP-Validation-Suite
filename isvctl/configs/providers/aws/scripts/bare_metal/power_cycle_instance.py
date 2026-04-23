@@ -18,7 +18,7 @@ a cold OS boot - validating that the node recovers from complete power loss.
 
 Usage:
     python power_cycle_instance.py --instance-id i-xxx --region us-west-2 \\
-        --key-file /tmp/key.pem --public-ip 54.x.x.x
+        --key-file /tmp/key.pem
 
 Output JSON:
 {
@@ -44,8 +44,9 @@ import time
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # providers/aws/scripts/ (for common.*)
 import boto3
+from common.ec2 import wait_for_public_ip
 from common.ssh_utils import wait_for_ssh
 
 
@@ -59,7 +60,6 @@ def main() -> int:
     parser.add_argument("--instance-id", required=True, help="EC2 instance ID")
     parser.add_argument("--region", default=os.environ.get("AWS_REGION", "us-west-2"))
     parser.add_argument("--key-file", required=True, help="Path to SSH private key")
-    parser.add_argument("--public-ip", required=True, help="Instance public IP")
     parser.add_argument("--ssh-user", default="ubuntu", help="SSH username")
     args = parser.parse_args()
 
@@ -71,7 +71,6 @@ def main() -> int:
         "instance_id": args.instance_id,
         "state": "",
         "region": args.region,
-        "public_ip": args.public_ip,
         "key_file": args.key_file,
         "ssh_user": args.ssh_user,
         "power_cycle_initiated": False,
@@ -144,8 +143,17 @@ def main() -> int:
         instances = ec2.describe_instances(InstanceIds=[args.instance_id])
         instance = instances["Reservations"][0]["Instances"][0]
         result["state"] = instance["State"]["Name"]
-        result["public_ip"] = instance.get("PublicIpAddress") or args.public_ip
         result["private_ip"] = instance.get("PrivateIpAddress")
+
+        # Poll for the fresh public IP post-powercycle. Pre-stop IP
+        # fallback is safe on AWS, stale on NCPs that release on stop.
+        fresh_ip = instance.get("PublicIpAddress") or wait_for_public_ip(ec2, args.instance_id)
+        if not fresh_ip:
+            result.pop("public_ip", None)
+            result["error"] = "Instance has no public IP after power-cycle (timed out polling)"
+            print(json.dumps(result, indent=2))
+            return 1
+        result["public_ip"] = fresh_ip
 
         # ============================================================
         # Step 7: Wait for SSH to be ready

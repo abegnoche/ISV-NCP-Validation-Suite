@@ -31,10 +31,13 @@ Requires: paramiko
 
 import argparse
 import json
+import re
 import sys
 from typing import Any
 
 import paramiko
+
+_CONTAINER_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 
 
 def ssh_connect(host: str, user: str, key_file: str) -> paramiko.SSHClient:
@@ -68,6 +71,12 @@ def main() -> int:
     parser.add_argument("--remove-image", action="store_true", help="Also remove the container image")
     args = parser.parse_args()
 
+    if not _CONTAINER_NAME_RE.match(args.container_name):
+        print(
+            json.dumps({"success": False, "error": f"Invalid container name: {args.container_name!r}"}),
+        )
+        return 1
+
     result: dict[str, Any] = {
         "success": False,
         "platform": "vm",
@@ -92,8 +101,9 @@ def main() -> int:
 
             # Stop and remove container
             print(f"Stopping container: {args.container_name}", file=sys.stderr)
-            exit_code, _, stderr_out = run_cmd(ssh, f"docker rm -f {args.container_name} 2>&1")
-            result["container_removed"] = exit_code == 0 or "No such container" in stderr_out
+            exit_code, stdout_out, stderr_out = run_cmd(ssh, f"docker rm -f {args.container_name}")
+            already_gone = "No such container" in stderr_out or "No such container" in stdout_out
+            result["container_removed"] = exit_code == 0 or already_gone
 
             # Optionally remove image
             if args.remove_image and image_name:

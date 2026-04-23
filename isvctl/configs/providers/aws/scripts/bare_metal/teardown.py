@@ -35,9 +35,13 @@ import json
 import os
 import sys
 import time
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # providers/aws/scripts/ (for common.*)
 
 import boto3
 from botocore.exceptions import ClientError, WaiterError
+from common.ec2 import sanitize_key_name
 
 
 def main() -> int:
@@ -163,17 +167,25 @@ def main() -> int:
                     f"SG {sg_id} still in use after retries; may need manual cleanup"
                 )
 
+    # AWS key pair names can include any printable ASCII (up to 255 chars),
+    # so pass the raw name to EC2. Only sanitize when composing the local
+    # /tmp/<name>.pem path, where a crafted name could traverse.
     if args.delete_key_pair and key_name:
         try:
             ec2.delete_key_pair(KeyName=key_name)
             result["deleted"]["key_pairs"].append(key_name)
             print(f"  Key pair {key_name}: deleted", file=sys.stderr)
-            key_file = f"/tmp/{key_name}.pem"
-            if os.path.exists(key_file):
-                os.remove(key_file)
         except ClientError as e:
             print(f"  Key pair {key_name}: {e}", file=sys.stderr)
             result.setdefault("warnings", []).append(f"Could not delete key pair: {e}")
+
+        try:
+            safe_key_name = sanitize_key_name(key_name)
+            key_file = f"/tmp/{safe_key_name}.pem"
+            if os.path.exists(key_file):
+                os.remove(key_file)
+        except ValueError as e:
+            result.setdefault("warnings", []).append(f"Key pair deleted in AWS but local key filename is unsafe: {e}")
 
     result["success"] = True
     result["resources_destroyed"] = True
