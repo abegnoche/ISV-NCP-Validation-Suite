@@ -62,8 +62,12 @@ def test_workload_or_node_scoping(ec2: Any, vpc_id: str, az: str, scope: str) ->
     eni_other = None
     tag = f"isv-sg-scope-{scope}-{uuid.uuid4().hex[:6]}"
 
+    apply_key = f"apply_{scope}_rule"
+    allowed_key = f"{'workload' if scope == 'workload' else 'target_node'}_allowed"
+    blocked_key = f"other_{'workload' if scope == 'workload' else 'node'}_blocked"
+    expected_keys = ["create_sg", apply_key, allowed_key, blocked_key]
+
     try:
-        # Create SG with an inbound rule
         sg = ec2.create_security_group(
             GroupName=tag,
             Description=f"SG scoping test ({scope})",
@@ -89,7 +93,6 @@ def test_workload_or_node_scoping(ec2: Any, vpc_id: str, az: str, scope: str) ->
         )
         results["create_sg"] = {"passed": True}
 
-        # Create a subnet + two ENIs
         subnet = ec2.create_subnet(VpcId=vpc_id, CidrBlock=SUBNET_A_CIDR, AvailabilityZone=az)
         subnet_id = subnet["Subnet"]["SubnetId"]
 
@@ -99,36 +102,25 @@ def test_workload_or_node_scoping(ec2: Any, vpc_id: str, az: str, scope: str) ->
         eni_o = ec2.create_network_interface(SubnetId=subnet_id)
         eni_other = eni_o["NetworkInterface"]["NetworkInterfaceId"]
 
-        apply_key = f"apply_{scope}_rule"
         results[apply_key] = {"passed": True}
 
-        # Verify target ENI has our SG
-        target_info = ec2.describe_network_interfaces(NetworkInterfaceIds=[eni_target])
-        target_sgs = [g["GroupId"] for g in target_info["NetworkInterfaces"][0]["Groups"]]
+        enis_info = ec2.describe_network_interfaces(NetworkInterfaceIds=[eni_target, eni_other])
+        by_id = {e["NetworkInterfaceId"]: e for e in enis_info["NetworkInterfaces"]}
+        target_sgs = [g["GroupId"] for g in by_id[eni_target]["Groups"]]
+        other_sgs = [g["GroupId"] for g in by_id[eni_other]["Groups"]]
 
-        allowed_key = f"{'workload' if scope == 'workload' else 'target_node'}_allowed"
         if sg_id in target_sgs:
             results[allowed_key] = {"passed": True, "message": f"SG {sg_id} attached to target ENI"}
         else:
             results[allowed_key] = {"passed": False, "error": "SG not attached to target ENI"}
 
-        # Verify other ENI does NOT have our SG
-        other_info = ec2.describe_network_interfaces(NetworkInterfaceIds=[eni_other])
-        other_sgs = [g["GroupId"] for g in other_info["NetworkInterfaces"][0]["Groups"]]
-
-        blocked_key = f"other_{'workload' if scope == 'workload' else 'node'}_blocked"
         if sg_id not in other_sgs:
             results[blocked_key] = {"passed": True, "message": "SG not on other ENI (scoped correctly)"}
         else:
             results[blocked_key] = {"passed": False, "error": "SG leaked to other ENI"}
 
     except ClientError as e:
-        for key in [
-            "create_sg",
-            f"apply_{scope}_rule",
-            f"{'workload' if scope == 'workload' else 'target_node'}_allowed",
-            f"other_{'workload' if scope == 'workload' else 'node'}_blocked",
-        ]:
+        for key in expected_keys:
             results.setdefault(key, {"passed": False, "error": str(e)})
     finally:
         for eni_id in [eni_target, eni_other]:
@@ -160,10 +152,10 @@ def test_subnet_scoping(ec2: Any, vpc_id: str, az: str) -> dict[str, Any]:
     nacl_id = None
 
     try:
-        # Create SG placeholder (NACLs are the subnet-level mechanism in AWS)
+        # Subnet scoping in AWS is enforced by NACLs rather than SGs; record
+        # this as the "create_sg" step the validation contract expects.
         results["create_sg"] = {"passed": True, "message": "Using NACLs for subnet-level scoping in AWS"}
 
-        # Create two subnets
         sa = ec2.create_subnet(VpcId=vpc_id, CidrBlock=SUBNET_A_CIDR, AvailabilityZone=az)
         subnet_a = sa["Subnet"]["SubnetId"]
         sb = ec2.create_subnet(VpcId=vpc_id, CidrBlock=SUBNET_B_CIDR, AvailabilityZone=az)
@@ -190,24 +182,22 @@ def test_subnet_scoping(ec2: Any, vpc_id: str, az: str) -> dict[str, Any]:
         )
         results["apply_subnet_rule"] = {"passed": True}
 
-        # Verify subnet A uses the custom NACL
-        nacls_a = ec2.describe_network_acls(Filters=[{"Name": "association.subnet-id", "Values": [subnet_a]}])[
-            "NetworkAcls"
-        ]
-        a_nacl_ids = [n["NetworkAclId"] for n in nacls_a]
+        nacls_both = ec2.describe_network_acls(
+            Filters=[{"Name": "association.subnet-id", "Values": [subnet_a, subnet_b]}]
+        )["NetworkAcls"]
+        nacls_by_subnet: dict[str, set[str]] = {subnet_a: set(), subnet_b: set()}
+        for nacl in nacls_both:
+            for assoc in nacl.get("Associations", []):
+                sid = assoc.get("SubnetId")
+                if sid in nacls_by_subnet:
+                    nacls_by_subnet[sid].add(nacl["NetworkAclId"])
 
-        if nacl_id in a_nacl_ids:
+        if nacl_id in nacls_by_subnet[subnet_a]:
             results["subnet_allowed"] = {"passed": True, "message": "Custom NACL applied to target subnet"}
         else:
             results["subnet_allowed"] = {"passed": False, "error": "Custom NACL not on target subnet"}
 
-        # Verify subnet B still uses default NACL (not the custom one)
-        nacls_b = ec2.describe_network_acls(Filters=[{"Name": "association.subnet-id", "Values": [subnet_b]}])[
-            "NetworkAcls"
-        ]
-        b_nacl_ids = [n["NetworkAclId"] for n in nacls_b]
-
-        if nacl_id not in b_nacl_ids:
+        if nacl_id not in nacls_by_subnet[subnet_b]:
             results["other_subnet_blocked"] = {
                 "passed": True,
                 "message": "Custom NACL not on other subnet (scoped correctly)",
@@ -219,7 +209,8 @@ def test_subnet_scoping(ec2: Any, vpc_id: str, az: str) -> dict[str, Any]:
         for key in ["create_sg", "apply_subnet_rule", "subnet_allowed", "other_subnet_blocked"]:
             results.setdefault(key, {"passed": False, "error": str(e)})
     finally:
-        # Re-associate default NACL before deleting custom one
+        # Custom NACL cannot be deleted while associated; swap subnet_a back
+        # to the VPC's default NACL first.
         if nacl_id and subnet_a:
             try:
                 default_nacl = _get_default_nacl(ec2, vpc_id)

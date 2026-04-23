@@ -29,7 +29,7 @@ from isvtest.core.ssh import (
     get_ssh_config,
     run_ssh_command,
 )
-from isvtest.core.validation import BaseValidation
+from isvtest.core.validation import BaseValidation, check_required_tests
 
 
 class NetworkProvisionedCheck(BaseValidation):
@@ -758,25 +758,10 @@ def _run_sg_scoping_check(
     label: str,
 ) -> None:
     """Shared logic for SG scoping validations (workload/node/subnet)."""
-    step_output = validation.config.get("step_output", {})
-    tests = step_output.get("tests", {})
-
-    if not tests:
-        validation.set_failed("No 'tests' in step output")
+    if not check_required_tests(validation, required_keys, f"{label} scoping tests failed"):
         return
-
-    failed = []
-    for test_name in required_keys:
-        test_result = tests.get(test_name, {})
-        if not test_result.get("passed"):
-            error = test_result.get("error", "test not found")
-            failed.append(f"{test_name}: {error}")
-
-    if failed:
-        validation.set_failed(f"{label} scoping tests failed: {'; '.join(failed)}")
-    else:
-        scope = step_output.get("scope", default_scope)
-        validation.set_passed(f"SG rules correctly scoped at {scope} level")
+    scope = validation.config.get("step_output", {}).get("scope", default_scope)
+    validation.set_passed(f"SG rules correctly scoped at {scope} level")
 
 
 class SgWorkloadScopingCheck(BaseValidation):

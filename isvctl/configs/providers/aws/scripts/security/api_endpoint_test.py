@@ -49,13 +49,8 @@ from botocore.exceptions import ClientError
 from common.errors import handle_aws_errors
 
 
-def _check_vpc_endpoints_private(ec2: Any) -> dict[str, Any]:
+def _check_vpc_endpoints_private(endpoints: list[dict[str, Any]]) -> dict[str, Any]:
     """Verify all VPC endpoints are interface-type (private)."""
-    try:
-        endpoints = ec2.describe_vpc_endpoints()["VpcEndpoints"]
-    except ClientError as e:
-        return {"passed": False, "error": str(e)}
-
     if not endpoints:
         return {"passed": True, "message": "No VPC endpoints configured (API access via SDK only)"}
 
@@ -132,22 +127,14 @@ def _check_eks_private(region: str) -> dict[str, Any]:
     }
 
 
-def _check_api_not_public_dns(ec2: Any) -> dict[str, Any]:
+def _check_api_not_public_dns(endpoints: list[dict[str, Any]]) -> dict[str, Any]:
     """Verify VPC endpoint DNS entries use private hosted zones."""
-    try:
-        endpoints = ec2.describe_vpc_endpoints(Filters=[{"Name": "vpc-endpoint-type", "Values": ["Interface"]}])[
-            "VpcEndpoints"
-        ]
-    except ClientError as e:
-        return {"passed": False, "error": str(e)}
+    interface_endpoints = [ep for ep in endpoints if ep.get("VpcEndpointType") == "Interface"]
 
-    if not endpoints:
+    if not interface_endpoints:
         return {"passed": True, "message": "No interface VPC endpoints (DNS check N/A)"}
 
-    non_private_dns = []
-    for ep in endpoints:
-        if not ep.get("PrivateDnsEnabled", False):
-            non_private_dns.append(ep["VpcEndpointId"])
+    non_private_dns = [ep["VpcEndpointId"] for ep in interface_endpoints if not ep.get("PrivateDnsEnabled", False)]
 
     if non_private_dns:
         return {
@@ -157,7 +144,7 @@ def _check_api_not_public_dns(ec2: Any) -> dict[str, Any]:
 
     return {
         "passed": True,
-        "message": f"{len(endpoints)} interface endpoints use private DNS",
+        "message": f"{len(interface_endpoints)} interface endpoints use private DNS",
     }
 
 
@@ -178,17 +165,23 @@ def main() -> int:
         "tests": {},
     }
 
-    # AWS API endpoints (EC2, S3, etc.) are accessed via HTTPS to
-    # regional service endpoints — they are not "public management IPs"
-    # in the traditional sense.  The real risk is EKS/API endpoints
-    # with public access enabled.
+    # AWS service APIs (EC2, S3, etc.) reach regional HTTPS SDK endpoints, not
+    # routable "public management IPs" — the real risk is EKS/API endpoints with
+    # public access enabled.
     result["tests"]["probe_api_from_public"] = {
         "passed": True,
         "message": "AWS service APIs use HTTPS SDK endpoints (not public management IPs)",
     }
-    result["tests"]["probe_mgmt_from_public"] = _check_vpc_endpoints_private(ec2)
+    try:
+        endpoints = ec2.describe_vpc_endpoints()["VpcEndpoints"]
+    except ClientError as e:
+        err = {"passed": False, "error": str(e)}
+        result["tests"]["probe_mgmt_from_public"] = err
+        result["tests"]["dns_not_public"] = err
+    else:
+        result["tests"]["probe_mgmt_from_public"] = _check_vpc_endpoints_private(endpoints)
+        result["tests"]["dns_not_public"] = _check_api_not_public_dns(endpoints)
     result["tests"]["verify_private_only"] = _check_eks_private(args.region)
-    result["tests"]["dns_not_public"] = _check_api_not_public_dns(ec2)
 
     count = sum(1 for t in result["tests"].values() if "message" in t or "error" in t)
     result["endpoints_tested"] = count

@@ -122,7 +122,7 @@ def main() -> int:
     # If no VPC provided, use the default VPC for a lightweight check
     vpc_id = args.vpc_id
     if not vpc_id:
-        vpcs = ec2.describe_vpcs(Filters=[{"Name": "isDefault", "Values": ["true"]}])["Vpcs"]
+        vpcs = ec2.describe_vpcs(Filters=[{"Name": "is-default", "Values": ["true"]}])["Vpcs"]
         if vpcs:
             vpc_id = vpcs[0]["VpcId"]
 

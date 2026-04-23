@@ -16,7 +16,7 @@ and other platform security requirements (SEC* test IDs).
 
 from typing import ClassVar
 
-from isvtest.core.validation import BaseValidation
+from isvtest.core.validation import BaseValidation, check_required_tests
 
 
 class BmcTenantIsolationCheck(BaseValidation):
@@ -38,32 +38,16 @@ class BmcTenantIsolationCheck(BaseValidation):
     markers: ClassVar[list[str]] = ["security", "network"]
 
     def run(self) -> None:
-        step_output = self.config.get("step_output", {})
-        tests = step_output.get("tests", {})
-
-        if not tests:
-            self.set_failed("No 'tests' in step output")
-            return
-
         required = [
             "probe_bmc_from_tenant",
             "probe_ipmi_port",
             "probe_redfish_port",
             "reverse_path_check",
         ]
-        failed = []
-
-        for test_name in required:
-            test_result = tests.get(test_name, {})
-            if not test_result.get("passed"):
-                error = test_result.get("error", "test not found")
-                failed.append(f"{test_name}: {error}")
-
-        if failed:
-            self.set_failed(f"BMC isolation tests failed: {'; '.join(failed)}")
-        else:
-            bmc_count = step_output.get("bmc_endpoints_tested", "N/A")
-            self.set_passed(f"BMC interfaces unreachable from tenant network ({bmc_count} endpoints tested)")
+        if not check_required_tests(self, required, "BMC isolation tests failed"):
+            return
+        bmc_count = self.config.get("step_output", {}).get("bmc_endpoints_tested", "N/A")
+        self.set_passed(f"BMC interfaces unreachable from tenant network ({bmc_count} endpoints tested)")
 
 
 class ApiEndpointIsolationCheck(BaseValidation):
@@ -85,29 +69,13 @@ class ApiEndpointIsolationCheck(BaseValidation):
     markers: ClassVar[list[str]] = ["security", "network"]
 
     def run(self) -> None:
-        step_output = self.config.get("step_output", {})
-        tests = step_output.get("tests", {})
-
-        if not tests:
-            self.set_failed("No 'tests' in step output")
-            return
-
         required = [
             "probe_api_from_public",
             "probe_mgmt_from_public",
             "verify_private_only",
             "dns_not_public",
         ]
-        failed = []
-
-        for test_name in required:
-            test_result = tests.get(test_name, {})
-            if not test_result.get("passed"):
-                error = test_result.get("error", "test not found")
-                failed.append(f"{test_name}: {error}")
-
-        if failed:
-            self.set_failed(f"API endpoint isolation tests failed: {'; '.join(failed)}")
-        else:
-            endpoints = step_output.get("endpoints_tested", "N/A")
-            self.set_passed(f"API endpoints not publicly accessible ({endpoints} endpoints tested)")
+        if not check_required_tests(self, required, "API endpoint isolation tests failed"):
+            return
+        endpoints = self.config.get("step_output", {}).get("endpoints_tested", "N/A")
+        self.set_passed(f"API endpoints not publicly accessible ({endpoints} endpoints tested)")

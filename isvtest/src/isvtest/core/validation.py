@@ -27,6 +27,36 @@ _logger = logging.getLogger(__name__)
 _validation_class_cache: dict[str, type[BaseValidation]] | None = None
 
 
+def check_required_tests(
+    validation: BaseValidation,
+    required_keys: list[str],
+    fail_label: str,
+) -> bool:
+    """Check that step_output.tests contains every required key with passed=True.
+
+    Sets failed on the validation if tests are missing or any required key did
+    not pass. On success, returns True without setting passed — the caller is
+    expected to call ``set_passed`` with a context-appropriate message.
+    """
+    step_output = validation.config.get("step_output", {})
+    tests = step_output.get("tests", {})
+    if not tests:
+        validation.set_failed("No 'tests' in step output")
+        return False
+
+    failed = []
+    for test_name in required_keys:
+        test_result = tests.get(test_name, {})
+        if not test_result.get("passed"):
+            error = test_result.get("error", "test not found")
+            failed.append(f"{test_name}: {error}")
+
+    if failed:
+        validation.set_failed(f"{fail_label}: {'; '.join(failed)}")
+        return False
+    return True
+
+
 class BaseValidation(ABC):
     """Base class for all ISV validation tests."""
 

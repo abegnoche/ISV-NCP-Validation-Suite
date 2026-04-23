@@ -68,20 +68,17 @@ def main() -> int:
     access_key_id = None
 
     try:
-        # Create a temporary IAM user (simulates out-of-cluster SA)
         iam.create_user(
             UserName=username,
             Tags=[{"Key": "CreatedBy", "Value": "isvtest"}],
         )
 
-        # Create long-lived access key
         key_response = iam.create_access_key(UserName=username)
         access_key_id = key_response["AccessKey"]["AccessKeyId"]
         secret_key = key_response["AccessKey"]["SecretAccessKey"]
 
         result["credential_type"] = "access_key"
 
-        # Authenticate with the new key via STS
         sts = boto3.client(
             "sts",
             region_name=args.region,
@@ -110,7 +107,6 @@ def main() -> int:
     except ClientError as e:
         result["error"] = str(e)
     finally:
-        # Cleanup: delete key then user
         if access_key_id:
             try:
                 iam.delete_access_key(UserName=username, AccessKeyId=access_key_id)
