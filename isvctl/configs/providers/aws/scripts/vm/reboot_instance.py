@@ -215,10 +215,10 @@ def main() -> int:
         # ============================================================
         # Step 7: Capture post-reboot uptime (affirmative reboot proof)
         # ============================================================
-        # An absent reboot_confirmed used to be treated as success by the
-        # validator; that silently passed runs whenever the post-reboot SSH
-        # or uptime parse flaked. Always emit reboot_confirmed as an explicit
-        # bool so the validator has an affirmative True to check.
+        # Sample post-reboot uptime over SSH; used below to derive boot time.
+        # Always emit reboot_confirmed as an explicit bool so the validator
+        # has an affirmative True to check (rather than treating absence as
+        # success).
         post_uptime = get_uptime_via_ssh(public_ip, args.ssh_user, args.key_file)
         if post_uptime is None:
             result["reboot_confirmed"] = False
@@ -230,9 +230,10 @@ def main() -> int:
         result["uptime_seconds"] = round(post_uptime, 1)
         print(f"  Post-reboot uptime: {post_uptime:.0f}s", file=sys.stderr)
 
-        # Primary proof: boot timestamp is after our reboot request.
-        # More reliable than uptime comparison — works even when pre_uptime
-        # couldn't be sampled or the machine had a short uptime before reboot.
+        # Compare the host's current boot time against when we issued the
+        # reboot API call. If the boot timestamp is later, the kernel booted
+        # after our request — affirmative reboot proof that doesn't depend
+        # on having a pre-reboot uptime sample.
         boot_started_at = time.time() - post_uptime
         if boot_started_at >= reboot_requested_at:
             result["reboot_confirmed"] = True
