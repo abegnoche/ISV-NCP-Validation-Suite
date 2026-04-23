@@ -165,8 +165,6 @@ commands:
           - "{{region}}"
           - "--key-file"
           - "{{steps.launch_instance.key_file}}"
-          - "--public-ip"
-          - "{{steps.launch_instance.public_ip}}"
         timeout: 2700
 
       # Reboot instance and validate recovery
@@ -230,8 +228,6 @@ commands:
           - "{{region}}"
           - "--key-file"
           - "{{steps.launch_instance.key_file}}"
-          - "--public-ip"
-          - "{{steps.power_cycle_instance.public_ip}}"
         timeout: 3600
 
       # Deploy NIM container via SSH (shared script)

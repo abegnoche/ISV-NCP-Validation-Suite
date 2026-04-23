@@ -110,8 +110,6 @@ commands:
           - "{{region}}"
           - "--key-file"
           - "{{steps.launch_instance.key_file}}"
-          - "--public-ip"
-          - "{{steps.launch_instance.public_ip}}"
         timeout: 300
 
       # AWS-specific: Reboot instance and validate recovery (boto3)

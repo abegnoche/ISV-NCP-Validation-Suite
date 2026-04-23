@@ -98,6 +98,8 @@ class TestDeleteWithRetry:
         """All attempts fail with BotoCoreError → False, not a raised exception."""
 
         class _PersistentBotoError(BotoCoreError):
+            """Synthetic persistent botocore error used to exercise retry exhaustion."""
+
             fmt = "persistent network failure"
 
         fn = MagicMock(side_effect=_PersistentBotoError())

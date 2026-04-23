@@ -89,9 +89,8 @@ def wait_for_public_ip(
     AWS preserves the public IP across stop/start, so post-transition stubs
     historically fell back to the pre-stop IP passed on the CLI. On NCPs
     that release the ephemeral IP on stop (GCP is the most common), that
-    fallback silently masks a stale IP. The safer pattern — and the one
-    The defensive default is to poll the describe API and never trust a
-    pre-stop value.
+    fallback silently masks a stale IP. The defensive default is to poll
+    the describe API and never trust a pre-stop value.
 
     Args:
         ec2: Boto3 EC2 client.

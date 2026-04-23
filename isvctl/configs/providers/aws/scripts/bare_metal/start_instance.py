@@ -18,7 +18,7 @@ hardware power-on (IPMI, BMC, full POST cycle, OS boot).
 
 Usage:
     python start_instance.py --instance-id i-xxx --region us-west-2 \\
-        --key-file /tmp/key.pem --public-ip 54.x.x.x
+        --key-file /tmp/key.pem
 
 Output JSON:
 {
@@ -59,7 +59,6 @@ def main() -> int:
     parser.add_argument("--instance-id", required=True, help="EC2 instance ID")
     parser.add_argument("--region", default=os.environ.get("AWS_REGION", "us-west-2"))
     parser.add_argument("--key-file", required=True, help="Path to SSH private key")
-    parser.add_argument("--public-ip", required=True, help="Instance public IP")
     parser.add_argument("--ssh-user", default="ubuntu", help="SSH username")
     args = parser.parse_args()
 
