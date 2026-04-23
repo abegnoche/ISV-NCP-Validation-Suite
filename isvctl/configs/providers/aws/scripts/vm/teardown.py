@@ -101,17 +101,25 @@ def main() -> int:
                         result.setdefault("warnings", []).append(f"Could not delete SG {sg_id}: {e}")
 
         # Delete key pair if requested
+        # AWS key pair names can include any printable ASCII (up to 255 chars),
+        # so pass the raw name to EC2. Only sanitize when composing the local
+        # /tmp/<name>.pem path, where a crafted name could traverse.
         if args.delete_key_pair and key_name:
             try:
-                key_name = sanitize_key_name(key_name)  # reject path-traversal chars
                 ec2.delete_key_pair(KeyName=key_name)
                 result["deleted"]["key_pairs"].append(key_name)
-                # Also delete local key file
-                key_file = f"/tmp/{key_name}.pem"
+            except ClientError as e:
+                result.setdefault("warnings", []).append(f"Could not delete key pair: {e}")
+
+            try:
+                safe_key_name = sanitize_key_name(key_name)
+                key_file = f"/tmp/{safe_key_name}.pem"
                 if os.path.exists(key_file):
                     os.remove(key_file)
-            except (ClientError, ValueError) as e:
-                result.setdefault("warnings", []).append(f"Could not delete key pair: {e}")
+            except ValueError as e:
+                result.setdefault("warnings", []).append(
+                    f"Key pair deleted in AWS but local key filename is unsafe: {e}"
+                )
 
         result["success"] = True
         result["resources_destroyed"] = True

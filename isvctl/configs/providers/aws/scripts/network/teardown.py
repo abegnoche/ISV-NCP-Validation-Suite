@@ -73,23 +73,29 @@ def delete_with_retry(func, resource_type: str, max_retries: int = 5, **kwargs) 
 
 
 def cleanup_key_pairs(ec2: Any, key_names: list[str]) -> list[str]:
-    """Delete key pairs by exact name (AWS + local PEM files)."""
+    """Delete key pairs by exact name (AWS + local PEM files).
+
+    AWS key pair names allow any printable ASCII up to 255 chars, so pass
+    the raw name to EC2. Sanitization is only needed when composing the
+    local ``/tmp/<name>.pem`` path, where a crafted name could traverse.
+    """
     deleted = []
     for raw_name in key_names:
         try:
-            key_name = sanitize_key_name(raw_name)  # prevent path traversal
-        except ValueError as e:
-            logger.warning("Skipping invalid key name %r: %s", raw_name, e)
-            continue
-        try:
-            ec2.describe_key_pairs(KeyNames=[key_name])
-            ec2.delete_key_pair(KeyName=key_name)
-            deleted.append(key_name)
+            ec2.describe_key_pairs(KeyNames=[raw_name])
+            ec2.delete_key_pair(KeyName=raw_name)
+            deleted.append(raw_name)
         except ClientError as e:
             if e.response["Error"]["Code"] != "InvalidKeyPair.NotFound":
                 raise
+
         # Clean up local PEM file (0400 permissions require chmod first)
-        pem_path = Path(f"/tmp/{key_name}.pem")
+        try:
+            safe_name = sanitize_key_name(raw_name)
+        except ValueError as e:
+            logger.warning("Key pair %r deleted but local PEM filename is unsafe: %s", raw_name, e)
+            continue
+        pem_path = Path(f"/tmp/{safe_name}.pem")
         if pem_path.exists():
             pem_path.chmod(0o600)
             pem_path.unlink()
