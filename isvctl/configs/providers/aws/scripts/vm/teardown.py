@@ -103,7 +103,7 @@ def main() -> int:
         # Delete key pair if requested
         if args.delete_key_pair and key_name:
             try:
-                key_name = sanitize_key_name(key_name)  # U5: reject path-traversal chars
+                key_name = sanitize_key_name(key_name)  # reject path-traversal chars
                 ec2.delete_key_pair(KeyName=key_name)
                 result["deleted"]["key_pairs"].append(key_name)
                 # Also delete local key file

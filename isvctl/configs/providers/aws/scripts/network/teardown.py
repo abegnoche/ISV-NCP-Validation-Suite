@@ -77,7 +77,7 @@ def cleanup_key_pairs(ec2: Any, key_names: list[str]) -> list[str]:
     deleted = []
     for raw_name in key_names:
         try:
-            key_name = sanitize_key_name(raw_name)  # U5: prevent path traversal
+            key_name = sanitize_key_name(raw_name)  # prevent path traversal
         except ValueError as e:
             logger.warning("Skipping invalid key name %r: %s", raw_name, e)
             continue

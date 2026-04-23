@@ -42,7 +42,7 @@ class TestInstanceRebootCheck:
         assert result["passed"] is True
 
     def test_fails_when_reboot_confirmed_absent(self) -> None:
-        """U1 core fix: absent key must FAIL (was silently passing)."""
+        """Absent key must FAIL (was silently passing)."""
         out = _reboot_output()
         del out["reboot_confirmed"]
         v = InstanceRebootCheck(config={"step_output": out})

@@ -111,7 +111,7 @@ def main() -> int:
         # ============================================================
         # Step 4: Get updated instance details
         # ============================================================
-        # U4: poll describe_instances for the fresh public IP. The old
+        # Poll describe_instances for the fresh public IP. The old
         # `instance.get("PublicIpAddress") or args.public_ip` fallback
         # was safe on AWS (IP preserved across stop/start) but would
         # silently mask a stale IP on NCPs that release the ephemeral

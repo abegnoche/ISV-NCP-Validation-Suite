@@ -147,7 +147,7 @@ def main() -> int:
         result["state"] = instance["State"]["Name"]
         result["private_ip"] = instance.get("PrivateIpAddress")
 
-        # U4: poll for the fresh public IP post-powercycle. Pre-stop IP
+        # Poll for the fresh public IP post-powercycle. Pre-stop IP
         # fallback is safe on AWS, stale on NCPs that release on stop.
         fresh_ip = instance.get("PublicIpAddress") or wait_for_public_ip(ec2, args.instance_id)
         if not fresh_ip:
