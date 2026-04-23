@@ -109,9 +109,7 @@ def main() -> int:
         result["tests"] = {t: {"passed": True} for t in test_names}
         result["success"] = True
     else:
-        result["error"] = (
-            f"Not implemented - replace with your platform's SG {args.scope}-level scoping test"
-        )
+        result["error"] = f"Not implemented - replace with your platform's SG {args.scope}-level scoping test"
 
     print(json.dumps(result, indent=2))
     return 0 if result["success"] else 1

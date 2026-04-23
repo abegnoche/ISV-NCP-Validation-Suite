@@ -63,9 +63,7 @@ class BmcTenantIsolationCheck(BaseValidation):
             self.set_failed(f"BMC isolation tests failed: {'; '.join(failed)}")
         else:
             bmc_count = step_output.get("bmc_endpoints_tested", "N/A")
-            self.set_passed(
-                f"BMC interfaces unreachable from tenant network ({bmc_count} endpoints tested)"
-            )
+            self.set_passed(f"BMC interfaces unreachable from tenant network ({bmc_count} endpoints tested)")
 
 
 class ApiEndpointIsolationCheck(BaseValidation):
@@ -112,6 +110,4 @@ class ApiEndpointIsolationCheck(BaseValidation):
             self.set_failed(f"API endpoint isolation tests failed: {'; '.join(failed)}")
         else:
             endpoints = step_output.get("endpoints_tested", "N/A")
-            self.set_passed(
-                f"API endpoints not publicly accessible ({endpoints} endpoints tested)"
-            )
+            self.set_passed(f"API endpoints not publicly accessible ({endpoints} endpoints tested)")

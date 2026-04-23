@@ -46,9 +46,7 @@ SUBNET_B_CIDR = "10.85.2.0/24"
 
 def _get_az(ec2: Any, region: str) -> str:
     """Return the first available AZ in the region."""
-    azs = ec2.describe_availability_zones(
-        Filters=[{"Name": "state", "Values": ["available"]}]
-    )["AvailabilityZones"]
+    azs = ec2.describe_availability_zones(Filters=[{"Name": "state", "Values": ["available"]}])["AvailabilityZones"]
     return azs[0]["ZoneName"]
 
 
@@ -67,20 +65,24 @@ def test_workload_or_node_scoping(ec2: Any, vpc_id: str, az: str, scope: str) ->
             GroupName=tag,
             Description=f"SG scoping test ({scope})",
             VpcId=vpc_id,
-            TagSpecifications=[{
-                "ResourceType": "security-group",
-                "Tags": [{"Key": "CreatedBy", "Value": "isvtest"}],
-            }],
+            TagSpecifications=[
+                {
+                    "ResourceType": "security-group",
+                    "Tags": [{"Key": "CreatedBy", "Value": "isvtest"}],
+                }
+            ],
         )
         sg_id = sg["GroupId"]
         ec2.authorize_security_group_ingress(
             GroupId=sg_id,
-            IpPermissions=[{
-                "IpProtocol": "tcp",
-                "FromPort": 443,
-                "ToPort": 443,
-                "IpRanges": [{"CidrIp": "10.0.0.0/8"}],
-            }],
+            IpPermissions=[
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 443,
+                    "ToPort": 443,
+                    "IpRanges": [{"CidrIp": "10.0.0.0/8"}],
+                }
+            ],
         )
         results["create_sg"] = {"passed": True}
 
@@ -118,8 +120,12 @@ def test_workload_or_node_scoping(ec2: Any, vpc_id: str, az: str, scope: str) ->
             results[blocked_key] = {"passed": False, "error": "SG leaked to other ENI"}
 
     except ClientError as e:
-        for key in ["create_sg", f"apply_{scope}_rule", f"{'workload' if scope == 'workload' else 'target_node'}_allowed",
-                     f"other_{'workload' if scope == 'workload' else 'node'}_blocked"]:
+        for key in [
+            "create_sg",
+            f"apply_{scope}_rule",
+            f"{'workload' if scope == 'workload' else 'target_node'}_allowed",
+            f"other_{'workload' if scope == 'workload' else 'node'}_blocked",
+        ]:
             results.setdefault(key, {"passed": False, "error": str(e)})
     finally:
         for eni_id in [eni_target, eni_other]:
@@ -182,9 +188,9 @@ def test_subnet_scoping(ec2: Any, vpc_id: str, az: str) -> dict[str, Any]:
         results["apply_subnet_rule"] = {"passed": True}
 
         # Verify subnet A uses the custom NACL
-        nacls_a = ec2.describe_network_acls(
-            Filters=[{"Name": "association.subnet-id", "Values": [subnet_a]}]
-        )["NetworkAcls"]
+        nacls_a = ec2.describe_network_acls(Filters=[{"Name": "association.subnet-id", "Values": [subnet_a]}])[
+            "NetworkAcls"
+        ]
         a_nacl_ids = [n["NetworkAclId"] for n in nacls_a]
 
         if nacl_id in a_nacl_ids:
@@ -193,9 +199,9 @@ def test_subnet_scoping(ec2: Any, vpc_id: str, az: str) -> dict[str, Any]:
             results["subnet_allowed"] = {"passed": False, "error": "Custom NACL not on target subnet"}
 
         # Verify subnet B still uses default NACL (not the custom one)
-        nacls_b = ec2.describe_network_acls(
-            Filters=[{"Name": "association.subnet-id", "Values": [subnet_b]}]
-        )["NetworkAcls"]
+        nacls_b = ec2.describe_network_acls(Filters=[{"Name": "association.subnet-id", "Values": [subnet_b]}])[
+            "NetworkAcls"
+        ]
         b_nacl_ids = [n["NetworkAclId"] for n in nacls_b]
 
         if nacl_id not in b_nacl_ids:

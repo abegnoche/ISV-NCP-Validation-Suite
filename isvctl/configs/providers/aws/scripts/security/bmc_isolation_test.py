@@ -57,7 +57,7 @@ from common.errors import handle_aws_errors
 # Well-known BMC/management CIDRs that should be unreachable
 BMC_CIDRS = [
     "169.254.0.0/16",  # link-local (IPMI often lives here)
-    "198.18.0.0/15",   # benchmarking range sometimes used for mgmt
+    "198.18.0.0/15",  # benchmarking range sometimes used for mgmt
 ]
 
 BMC_PORTS = {
@@ -68,9 +68,7 @@ BMC_PORTS = {
 
 def _check_route_tables(ec2: Any, vpc_id: str) -> dict[str, Any]:
     """Verify VPC route tables have no routes toward BMC CIDRs."""
-    rts = ec2.describe_route_tables(
-        Filters=[{"Name": "vpc-id", "Values": [vpc_id]}]
-    )["RouteTables"]
+    rts = ec2.describe_route_tables(Filters=[{"Name": "vpc-id", "Values": [vpc_id]}])["RouteTables"]
 
     for rt in rts:
         for route in rt.get("Routes", []):
@@ -87,9 +85,7 @@ def _check_route_tables(ec2: Any, vpc_id: str) -> dict[str, Any]:
 
 def _check_sg_no_bmc_egress(ec2: Any, vpc_id: str) -> dict[str, Any]:
     """Verify no SGs have explicit egress rules targeting BMC ranges."""
-    sgs = ec2.describe_security_groups(
-        Filters=[{"Name": "vpc-id", "Values": [vpc_id]}]
-    )["SecurityGroups"]
+    sgs = ec2.describe_security_groups(Filters=[{"Name": "vpc-id", "Values": [vpc_id]}])["SecurityGroups"]
 
     for sg in sgs:
         for rule in sg.get("IpPermissionsEgress", []):

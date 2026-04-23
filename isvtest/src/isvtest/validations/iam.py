@@ -176,9 +176,7 @@ class ServiceAccountCredentialCheck(BaseValidation):
 
         credential_type = step_output.get("credential_type", "unknown")
         identity = step_output.get("identity", "unknown")
-        self.set_passed(
-            f"Service account authenticated via {credential_type} as {identity}"
-        )
+        self.set_passed(f"Service account authenticated via {credential_type} as {identity}")
 
 
 # =============================================================================

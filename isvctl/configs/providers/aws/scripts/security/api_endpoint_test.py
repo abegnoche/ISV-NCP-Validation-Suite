@@ -119,9 +119,9 @@ def _check_eks_private(region: str) -> dict[str, Any]:
 def _check_api_not_public_dns(ec2: Any) -> dict[str, Any]:
     """Verify VPC endpoint DNS entries use private hosted zones."""
     try:
-        endpoints = ec2.describe_vpc_endpoints(
-            Filters=[{"Name": "vpc-endpoint-type", "Values": ["Interface"]}]
-        )["VpcEndpoints"]
+        endpoints = ec2.describe_vpc_endpoints(Filters=[{"Name": "vpc-endpoint-type", "Values": ["Interface"]}])[
+            "VpcEndpoints"
+        ]
     except ClientError as e:
         return {"passed": False, "error": str(e)}
 

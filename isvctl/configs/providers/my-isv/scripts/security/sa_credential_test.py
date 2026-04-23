@@ -41,9 +41,7 @@ DEMO_MODE = os.environ.get("ISVCTL_DEMO_MODE") == "1"
 
 def main() -> int:
     """SA credential test (template) and emit structured JSON result."""
-    parser = argparse.ArgumentParser(
-        description="Service account credential test (template)"
-    )
+    parser = argparse.ArgumentParser(description="Service account credential test (template)")
     parser.add_argument("--region", required=True, help="Cloud region")
     _args = parser.parse_args()
 
@@ -77,9 +75,7 @@ def main() -> int:
         result["expires_at"] = None
         result["success"] = True
     else:
-        result["error"] = (
-            "Not implemented - replace with your platform's service account credential test"
-        )
+        result["error"] = "Not implemented - replace with your platform's service account credential test"
 
     print(json.dumps(result, indent=2))
     return 0 if result["success"] else 1
