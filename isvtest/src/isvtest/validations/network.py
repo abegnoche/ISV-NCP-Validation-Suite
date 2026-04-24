@@ -29,7 +29,7 @@ from isvtest.core.ssh import (
     get_ssh_config,
     run_ssh_command,
 )
-from isvtest.core.validation import BaseValidation
+from isvtest.core.validation import BaseValidation, check_required_tests
 
 
 class NetworkProvisionedCheck(BaseValidation):
@@ -749,6 +749,101 @@ class VpcIpConfigCheck(BaseValidation):
                 False,
                 "No subnets have auto_assign_public_ip enabled",
             )
+
+
+def _run_sg_scoping_check(
+    validation: BaseValidation,
+    required_keys: list[str],
+    default_scope: str,
+    label: str,
+) -> None:
+    """Shared logic for SG scoping validations (workload/node/subnet)."""
+    if not check_required_tests(validation, required_keys, f"{label} scoping tests failed"):
+        return
+    scope = validation.config.get("step_output", {}).get("scope", default_scope)
+    validation.set_passed(f"SG rules correctly scoped at {scope} level")
+
+
+class SgWorkloadScopingCheck(BaseValidation):
+    """Validate security group rules can be scoped at workload level.
+
+    Verifies the platform supports applying SG rules that target individual
+    workloads (pods, containers, tasks) rather than broad node/subnet ranges.
+
+    Config:
+        step_output: The step output to check
+
+    Step output:
+        tests: dict with create_sg, apply_workload_rule, workload_allowed,
+               other_workload_blocked, cleanup
+    """
+
+    description: ClassVar[str] = "Check SG rules scoped at workload level"
+    markers: ClassVar[list[str]] = ["network", "security"]
+
+    def run(self) -> None:
+        """Check workload-level SG scoping from step output."""
+        _run_sg_scoping_check(
+            self,
+            ["create_sg", "apply_workload_rule", "workload_allowed", "other_workload_blocked", "cleanup"],
+            "workload",
+            "Workload",
+        )
+
+
+class SgNodeScopingCheck(BaseValidation):
+    """Validate security group rules can be scoped at node level.
+
+    Verifies the platform supports applying SG rules that target individual
+    nodes, ensuring traffic policy is enforced per-host.
+
+    Config:
+        step_output: The step output to check
+
+    Step output:
+        tests: dict with create_sg, apply_node_rule, target_node_allowed,
+               other_node_blocked, cleanup
+    """
+
+    description: ClassVar[str] = "Check SG rules scoped at node level"
+    markers: ClassVar[list[str]] = ["network", "security"]
+
+    def run(self) -> None:
+        """Check node-level SG scoping from step output."""
+        _run_sg_scoping_check(
+            self,
+            ["create_sg", "apply_node_rule", "target_node_allowed", "other_node_blocked", "cleanup"],
+            "node",
+            "Node",
+        )
+
+
+class SgSubnetScopingCheck(BaseValidation):
+    """Validate security group rules can be scoped at subnet/tenant level.
+
+    Verifies the platform supports applying SG rules at the subnet or
+    tenant boundary, ensuring cross-tenant or cross-subnet traffic is
+    controlled.
+
+    Config:
+        step_output: The step output to check
+
+    Step output:
+        tests: dict with create_sg, apply_subnet_rule, subnet_allowed,
+               other_subnet_blocked, cleanup
+    """
+
+    description: ClassVar[str] = "Check SG rules scoped at subnet/tenant level"
+    markers: ClassVar[list[str]] = ["network", "security"]
+
+    def run(self) -> None:
+        """Check subnet-level SG scoping from step output."""
+        _run_sg_scoping_check(
+            self,
+            ["create_sg", "apply_subnet_rule", "subnet_allowed", "other_subnet_blocked", "cleanup"],
+            "subnet",
+            "Subnet",
+        )
 
 
 class ByoipCheck(BaseValidation):
