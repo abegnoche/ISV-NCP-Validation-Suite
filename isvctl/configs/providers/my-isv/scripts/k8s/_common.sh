@@ -162,7 +162,9 @@ cat << EOF
   "csi": {
     "block_storage_class": "${CSI_BLOCK_SC}",
     "shared_fs_storage_class": "${CSI_SHARED_FS_SC}",
-    "nfs_storage_class": "${CSI_NFS_SC}"
+    "nfs_storage_class": "${CSI_NFS_SC}",
+    "static_volume_handle": "",
+    "static_driver_name": ""
   }
 }
 EOF
