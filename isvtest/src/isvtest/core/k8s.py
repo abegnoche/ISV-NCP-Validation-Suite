@@ -189,7 +189,7 @@ def get_kubectl_base_shell(*args: str) -> str:
 
     Use this when interpolating kubectl into a shell command string (e.g.
     passing to ``run_command`` or composing pipes). For argv-style calls
-    (``subprocess.run``), use :func:`get_kubectl_command` instead.
+    (``subprocess.run``), use ``get_kubectl_command`` instead.
 
     With no args, returns just the provider-aware kubectl prefix. With args,
     returns the fully composed, shell-quoted command — useful for callers

@@ -315,7 +315,7 @@ def get_nim_genai_perf_concurrency() -> int:
 
 
 def get_k8s_require_dual_stack() -> str:
-    """Get the dual-stack requirement for :class:`K8sDualStackNodeCheck`.
+    """Get the dual-stack requirement for ``K8sDualStackNodeCheck``.
 
     Returns:
         One of ``"true"``, ``"false"``, or ``"auto"`` (default: ``"auto"``).

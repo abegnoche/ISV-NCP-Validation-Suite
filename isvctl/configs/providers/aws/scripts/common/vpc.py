@@ -75,7 +75,7 @@ def create_test_vpc(
 def delete_vpc(ec2: Any, vpc_id: str) -> None:
     """Delete a VPC with transient-error retry.
 
-    Routes through :func:`delete_with_retry` so a transient throttling or
+    Routes through ``delete_with_retry`` so a transient throttling or
     endpoint-reset does not leak the VPC on the finally-block path.
 
     Args:
@@ -100,7 +100,7 @@ def cleanup_vpc_resources(
     """Clean up VPC and associated resources with transient-error retry.
 
     Deletes resources in dependency order: SGs -> NACLs -> subnets -> VPC.
-    Every delete goes through :func:`delete_with_retry`, so a transient
+    Every delete goes through ``delete_with_retry``, so a transient
     failure on one resource does not orphan the rest of the dependency tree.
 
     Args:

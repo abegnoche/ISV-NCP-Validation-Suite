@@ -458,7 +458,7 @@ class StepExecutor:
 
         * If the template references a ``{{steps.X.Y}}`` path that is
           unresolved AND no ``default(...)`` filter is used, raise
-          :class:`MissingStepRefError` — the caller didn't express intent
+          ``MissingStepRefError`` - the caller didn't express intent
           to skip, so a silent drop would mask a real bug.
         * If the template uses ``default(...)`` or is a pure Jinja
           conditional (no ``steps.*`` reference), the empty result is

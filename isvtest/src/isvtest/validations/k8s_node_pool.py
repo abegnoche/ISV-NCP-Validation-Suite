@@ -157,7 +157,7 @@ class K8sNodePoolCheck(BaseValidation):
         """Poll until ``expected_replicas`` nodes match ``label_selector`` and are Ready.
 
         Returns the list of node objects on success. On failure/timeout,
-        calls :meth:`set_failed` and returns ``None``.
+        calls ``set_failed`` and returns ``None``.
         """
         cmd = f"{get_kubectl_base_shell()} get nodes -l {shlex.quote(label_selector)} -o json"
         deadline = time.monotonic() + wait_timeout
