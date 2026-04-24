@@ -359,6 +359,12 @@ class Orchestrator:
                 if junit_tmpdir:
                     phase_junitxml = str(Path(junit_tmpdir) / f"junit-{phase_name}.xml")
 
+                # Tell the context which phase is being rendered so it can
+                # suppress "step has no output (not run?)" warnings for steps
+                # whose phase comes after the current one (they simply
+                # haven't had a chance to run yet).
+                self.context.set_current_phase(phase_name, config_phases)
+
                 # Run validations for this phase (excluding categories that match exclude markers)
                 test_settings = self.config.tests.settings if self.config.tests else {}
                 phase_validations = self.step_executor.run_validations_for_phase(

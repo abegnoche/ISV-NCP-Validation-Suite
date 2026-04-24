@@ -106,6 +106,12 @@ class Context:
         # Phases that were actually requested (set by orchestrator)
         self._requested_phases: set[str] | None = None
 
+        # Phase currently being rendered (set before each per-phase render).
+        # Used to suppress warnings for steps whose phase hasn't had a chance
+        # to run yet (i.e., their phase comes after the current phase).
+        self._current_phase: str | None = None
+        self._phase_order: list[str] = []
+
         # Layer 6: Environment variables (for {{env.VAR}} access)
         # Must be loaded before settings so settings can reference env vars.
         # Sensitive variables (API keys, secrets) are excluded to prevent
@@ -168,6 +174,25 @@ class Context:
             phases: Set of phase names that were requested
         """
         self._requested_phases = phases
+
+    def set_current_phase(self, phase: str, phase_order: list[str] | None = None) -> None:
+        """Record the phase currently being rendered.
+
+        Used by ``_warn_missing_step_defaults`` to suppress warnings for
+        steps whose phase hasn't had a chance to run yet (i.e., the step's
+        phase comes after ``phase`` in ``phase_order``). Without this, a
+        template in a later-phase validation (e.g. a ``test``-phase check
+        referencing ``steps.describe_instance``) would falsely warn while
+        validations are being rendered for an earlier phase.
+
+        Args:
+            phase: Current phase being rendered (e.g., ``'setup'``, ``'test'``).
+            phase_order: Ordered list of all configured phases. If provided,
+                replaces the known phase order used for ordering comparisons.
+        """
+        self._current_phase = phase
+        if phase_order is not None:
+            self._phase_order = list(phase_order)
 
     def set_step_phase(self, step_name: str, phase: str) -> None:
         """Record the phase a step belongs to.
@@ -299,6 +324,19 @@ class Context:
                 step_phase = self._step_phases.get(step_name)
                 if self._requested_phases and step_phase and step_phase not in self._requested_phases:
                     continue
+                # Suppress warning if the step's phase hasn't had a chance to
+                # run yet (i.e., it comes after the phase currently being
+                # rendered). Without this, rendering validations for an early
+                # phase falsely warns about every step referenced by later
+                # phases' validations.
+                if step_phase and self._current_phase and self._phase_order:
+                    try:
+                        step_idx = self._phase_order.index(step_phase)
+                        curr_idx = self._phase_order.index(self._current_phase)
+                    except ValueError:
+                        step_idx = curr_idx = -1
+                    if step_idx > curr_idx >= 0:
+                        continue
                 self._warned_missing_steps.add(warn_key)
                 msg = f"step '{step_name}' has no output (not run?), using defaults for: steps.{full_path}"
                 logger.warning(msg)
