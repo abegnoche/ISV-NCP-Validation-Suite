@@ -74,6 +74,42 @@ if [ ! -d ".terraform" ]; then
     terraform init >&2
 fi
 
+# -----------------------------------------------------------------------------
+# Delete standalone EBS volume(s) created for static CSI validation
+# -----------------------------------------------------------------------------
+# These volumes are provisioned by setup.sh out-of-band (not via Terraform),
+# so terraform destroy would leave them orphaned. We look them up by the
+# tags setup.sh writes, wait for them to detach (EBS CSI may still have
+# mounted them during a previous test run), and delete them before the
+# Terraform destroy pulls the cluster out from under them.
+
+if command -v aws &> /dev/null && command -v jq &> /dev/null; then
+    CLUSTER_NAME=$(terraform output -raw cluster_name 2>/dev/null || echo "")
+    if [ -z "$CLUSTER_NAME" ]; then
+        echo "Warning: could not resolve terraform output 'cluster_name'; skipping static CSI EBS cleanup." >&2
+        STATIC_VOLS=""
+    else
+        STATIC_VOLS=$(aws ec2 describe-volumes \
+            --filters \
+                "Name=tag:isv-ncp-validation-suite,Values=static-csi" \
+                "Name=tag:cluster,Values=${CLUSTER_NAME}" \
+            --region "$AWS_REGION" --output json 2>/dev/null \
+            | jq -r '.Volumes[].VolumeId' 2>/dev/null || echo "")
+    fi
+
+    if [ -n "$STATIC_VOLS" ]; then
+        for vol in $STATIC_VOLS; do
+            echo "Releasing standalone static-CSI EBS volume $vol..." >&2
+            aws ec2 wait volume-available --volume-ids "$vol" --region "$AWS_REGION" >&2 2>&1 || true
+            if aws ec2 delete-volume --volume-id "$vol" --region "$AWS_REGION" >&2 2>&1; then
+                echo "  Deleted $vol" >&2
+            else
+                echo "  Warning: failed to delete $vol; manual cleanup may be required" >&2
+            fi
+        done
+    fi
+fi
+
 # Destroy
 TF_AUTO_APPROVE="${TF_AUTO_APPROVE:-false}"
 if [ "$TF_AUTO_APPROVE" = "true" ]; then
