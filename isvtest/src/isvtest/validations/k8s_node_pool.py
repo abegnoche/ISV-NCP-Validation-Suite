@@ -46,18 +46,18 @@ class K8sNodePoolCheck(BaseValidation):
 
     Config keys (populated from the provisioning step's JSON output):
 
-    * ``label_selector`` — kubectl label selector identifying the new nodes
+    * ``label_selector`` - kubectl label selector identifying the new nodes
       (e.g. ``eks.amazonaws.com/nodegroup=isv-test-pool``). Required.
-    * ``expected_replicas`` — node count that must reach Ready. Required.
-    * ``expected_labels`` — mapping or JSON string; subset check per node.
-    * ``expected_taints`` — list of ``{key, value, effect}`` or JSON string;
+    * ``expected_replicas`` - node count that must reach Ready. Required.
+    * ``expected_labels`` - mapping or JSON string; subset check per node.
+    * ``expected_taints`` - list of ``{key, value, effect}`` or JSON string;
       subset check per node.
-    * ``expected_instance_types`` — list of instance type strings or JSON
+    * ``expected_instance_types`` - list of instance type strings or JSON
       string; each node's type must be in this set.
-    * ``node_type`` — informational ``"cpu"`` or ``"gpu"`` tag surfaced in
+    * ``node_type`` - informational ``"cpu"`` or ``"gpu"`` tag surfaced in
       the result message.
-    * ``wait_timeout`` — seconds to wait for nodes to reach Ready (default 600).
-    * ``poll_interval`` — seconds between polls (default 5).
+    * ``wait_timeout`` - seconds to wait for nodes to reach Ready (default 600).
+    * ``poll_interval`` - seconds between polls (default 5).
 
     The label-check, taint-check, and instance-type-check are each skipped
     when their corresponding ``expected_*`` config is empty, so callers can
@@ -157,7 +157,7 @@ class K8sNodePoolCheck(BaseValidation):
         """Poll until ``expected_replicas`` nodes match ``label_selector`` and are Ready.
 
         Returns the list of node objects on success. On failure/timeout,
-        calls :meth:`set_failed` and returns ``None``.
+        calls ``set_failed`` and returns ``None``.
         """
         cmd = f"{get_kubectl_base_shell()} get nodes -l {shlex.quote(label_selector)} -o json"
         deadline = time.monotonic() + wait_timeout

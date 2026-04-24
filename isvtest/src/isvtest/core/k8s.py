@@ -29,7 +29,7 @@ from isvtest.core.logger import setup_logger
 logger = setup_logger(__name__)
 
 # Container waiting reasons that kubelet only reports after it has already
-# given up retrying — callers can fast-fail instead of waiting out a timeout.
+# given up retrying - callers can fast-fail instead of waiting out a timeout.
 TERMINAL_WAITING_REASONS: frozenset[str] = frozenset(
     {
         "ImagePullBackOff",
@@ -189,10 +189,10 @@ def get_kubectl_base_shell(*args: str) -> str:
 
     Use this when interpolating kubectl into a shell command string (e.g.
     passing to ``run_command`` or composing pipes). For argv-style calls
-    (``subprocess.run``), use :func:`get_kubectl_command` instead.
+    (``subprocess.run``), use ``get_kubectl_command`` instead.
 
     With no args, returns just the provider-aware kubectl prefix. With args,
-    returns the fully composed, shell-quoted command — useful for callers
+    returns the fully composed, shell-quoted command - useful for callers
     that would otherwise re-implement the quoting inline.
     """
     return " ".join(shlex.quote(part) for part in (*get_kubectl_command(), *args))
@@ -205,7 +205,7 @@ def render_k8s_manifest(
     """Load a multi-doc YAML manifest, apply ``mutate`` to each doc, and serialize it back.
 
     The manifest file must contain valid, parseable YAML with sensible default
-    values — callers mutate the parsed objects rather than templating strings.
+    values - callers mutate the parsed objects rather than templating strings.
     This keeps manifests readable in isolation and avoids quoting / escaping
     pitfalls of ``str.replace``-style substitution.
 

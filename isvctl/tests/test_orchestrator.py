@@ -400,3 +400,116 @@ class TestContext:
         assert len(caplog.records) == 1
         assert "'typo_field' not found" in caplog.records[0].message
         assert "gpu_per_node" in caplog.records[0].message
+
+    def test_no_warning_when_step_phase_is_after_current_phase(self, caplog: pytest.LogCaptureFixture) -> None:
+        """Rendering during an earlier phase must not warn about pending later-phase steps.
+
+        Validations are rendered once per phase against the full config, so a
+        ``test``-phase template like ``{{ steps.describe_instance.public_ip }}``
+        is evaluated while ``setup`` is still running. The step exists and will
+        run later; warning here is pure noise.
+        """
+        config = RunConfig()
+        context = Context(config)
+        context.set_requested_phases({"setup", "test", "teardown"})
+        context.set_step_phase("describe_instance", "test")
+        context.set_current_phase("setup", ["setup", "test", "teardown"])
+
+        with caplog.at_level(logging.WARNING, logger="isvctl.orchestrator.context"):
+            result = context.render_string("{{ steps.describe_instance.public_ip | default('1.2.3.4', true) }}")
+
+        assert result == "1.2.3.4"
+        assert caplog.records == []
+        assert context.get_warnings() == []
+
+    def test_warns_when_step_phase_is_current_phase_with_no_output(self, caplog: pytest.LogCaptureFixture) -> None:
+        """A step in the phase currently being rendered that produced no output should warn."""
+        config = RunConfig()
+        context = Context(config)
+        context.set_requested_phases({"setup", "test", "teardown"})
+        context.set_step_phase("launch_instance", "setup")
+        context.set_current_phase("setup", ["setup", "test", "teardown"])
+
+        with caplog.at_level(logging.WARNING, logger="isvctl.orchestrator.context"):
+            context.render_string("{{ steps.launch_instance.instance_id | default('i-0', true) }}")
+
+        assert len(caplog.records) == 1
+        assert "step 'launch_instance' has no output" in caplog.records[0].message
+
+    def test_warns_when_step_phase_is_before_current_phase_with_no_output(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """A step whose phase already completed but produced no output should still warn."""
+        config = RunConfig()
+        context = Context(config)
+        context.set_requested_phases({"setup", "test", "teardown"})
+        context.set_step_phase("launch_instance", "setup")
+        context.set_current_phase("test", ["setup", "test", "teardown"])
+
+        with caplog.at_level(logging.WARNING, logger="isvctl.orchestrator.context"):
+            context.render_string("{{ steps.launch_instance.instance_id | default('i-0', true) }}")
+
+        assert len(caplog.records) == 1
+        assert "step 'launch_instance' has no output" in caplog.records[0].message
+
+    def test_no_warning_inside_silenced_validation_subtree(self, caplog: pytest.LogCaptureFixture) -> None:
+        """Templates inside a validation pytest will deselect must not warn.
+
+        Mirrors the microk8s case: K8sNodePoolCheck is marker-excluded (slow)
+        and references steps that don't exist on the provider. Since the check
+        never runs, its dead template refs should be silent.
+        """
+        config = RunConfig()
+        context = Context(config)
+        context.set_silenced_validation_names({"K8sNodePoolCheck"})
+
+        data = {
+            "k8s_node_pools": {
+                "checks": {
+                    "K8sNodePoolCheck-Create": {
+                        "label_selector": "{{ steps.create_test_node_pool.label_selector }}",
+                        "expected_replicas": "{{ steps.create_test_node_pool.expected_replicas | default(1, true) }}",
+                    },
+                    "K8sNodePoolCheck-Update": {
+                        "label_selector": "{{ steps.update_test_node_pool.label_selector }}",
+                    },
+                },
+            },
+        }
+
+        with caplog.at_level(logging.WARNING, logger="isvctl.orchestrator.context"):
+            context.render_dict(data)
+
+        assert caplog.records == []
+        assert context.get_warnings() == []
+
+    def test_warnings_still_emitted_outside_silenced_subtrees(self, caplog: pytest.LogCaptureFixture) -> None:
+        """Silencing must not leak past the silenced subtree."""
+        config = RunConfig()
+        context = Context(config)
+        context.set_silenced_validation_names({"K8sNodePoolCheck"})
+
+        data = {
+            "k8s_node_pools": {
+                "checks": {
+                    "K8sNodePoolCheck-Create": {
+                        "label_selector": "{{ steps.create_test_node_pool.label_selector }}",
+                    },
+                },
+            },
+            "kubernetes": {
+                "checks": {
+                    "K8sNodeCountCheck": {
+                        "count": "{{ steps.setup.kubernetes.node_count | default(1, true) }}",
+                    },
+                },
+            },
+        }
+
+        with caplog.at_level(logging.WARNING, logger="isvctl.orchestrator.context"):
+            context.render_dict(data)
+
+        messages = [r.message for r in caplog.records]
+        assert len(messages) == 1
+        assert "step 'setup' has no output" in messages[0]
+        assert not any("create_test_node_pool" in m for m in messages)

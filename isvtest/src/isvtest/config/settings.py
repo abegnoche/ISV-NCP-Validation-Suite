@@ -315,7 +315,7 @@ def get_nim_genai_perf_concurrency() -> int:
 
 
 def get_k8s_require_dual_stack() -> str:
-    """Get the dual-stack requirement for :class:`K8sDualStackNodeCheck`.
+    """Get the dual-stack requirement for ``K8sDualStackNodeCheck``.
 
     Returns:
         One of ``"true"``, ``"false"``, or ``"auto"`` (default: ``"auto"``).
@@ -328,7 +328,7 @@ def get_k8s_csi_block_storage_class() -> str:
     """Get StorageClass name for CSI block storage validation.
 
     Returns:
-        StorageClass name (default: empty string — subtest will skip).
+        StorageClass name (default: empty string - subtest will skip).
     """
     return os.getenv("K8S_CSI_BLOCK_SC", "")
 
@@ -337,7 +337,7 @@ def get_k8s_csi_shared_fs_storage_class() -> str:
     """Get StorageClass name for CSI shared filesystem (RWX) validation.
 
     Returns:
-        StorageClass name (default: empty string — subtest will skip).
+        StorageClass name (default: empty string - subtest will skip).
     """
     return os.getenv("K8S_CSI_SHARED_FS_SC", "")
 
@@ -346,7 +346,7 @@ def get_k8s_csi_nfs_storage_class() -> str:
     """Get StorageClass name for CSI NFS validation.
 
     Returns:
-        StorageClass name (default: empty string — subtest will skip).
+        StorageClass name (default: empty string - subtest will skip).
     """
     return os.getenv("K8S_CSI_NFS_SC", "")
 

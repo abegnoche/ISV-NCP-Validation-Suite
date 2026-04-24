@@ -2,7 +2,7 @@
 
 This module attaches a managed node group to the cluster provisioned by
 `../terraform/`, exercising the create, update (scale), and delete legs of
-the node-pool CRUD contract. It is driven by `../create_node_pool.sh` (setup —
+the node-pool CRUD contract. It is driven by `../create_node_pool.sh` (setup -
 used for both initial create and subsequent updates, since `terraform apply`
 is idempotent) and `../destroy_node_pool.sh` (teardown); end users should
 not `terraform apply` it by hand.
@@ -15,17 +15,17 @@ never written.
 
 ## Inputs
 
-| Variable          | Default                     | Notes                                                        |
-|-------------------|-----------------------------|--------------------------------------------------------------|
-| `region`          | `us-west-2`                 | Must match the cluster's region.                             |
-| `environment`     | `dev`                       | Default tag.                                                 |
-| `node_pool_name`  | `isv-test-pool`             | EKS `nodegroup` name; visible as `eks.amazonaws.com/nodegroup=<name>`. |
-| `instance_types`  | `["m6i.large"]`             | CPU default; set to `["c5n.18xlarge"]` etc. for high-perf-net. |
-| `ami_type`        | `AL2023_x86_64_STANDARD`    | Use `AL2_x86_64_GPU` for legacy GPU pools.                   |
-| `capacity_type`   | `ON_DEMAND`                 | `ON_DEMAND` or `SPOT`.                                       |
-| `desired_size`    | `1`                         | `min`/`max`/`desired` are pinned to this value.              |
-| `labels`          | `{}`                        | Merged on top of stable `isv.ncp.validation/pool` markers.   |
-| `taints`          | `[]`                        | Kubernetes effect spelling (`NoSchedule`…); module translates to EKS enum. |
+| Variable          | Default                  | Notes                                                        |
+|-------------------|--------------------------|--------------------------------------------------------------|
+| `region`          | `us-west-2`              | Must match the cluster's region.                             |
+| `environment`     | `dev`                    | Default tag.                                                 |
+| `node_pool_name`  | `isv-test-pool`          | EKS `nodegroup` name; visible as `eks.amazonaws.com/nodegroup=<name>`. |
+| `instance_types`  | `["m6i.large"]`          | CPU default; set to `["c5n.18xlarge"]` etc. for high-perf-net. |
+| `ami_type`        | `AL2023_x86_64_STANDARD` | Use `AL2_x86_64_GPU` for legacy GPU pools.                   |
+| `capacity_type`   | `ON_DEMAND`              | `ON_DEMAND` or `SPOT`.                                       |
+| `desired_size`    | `1`                      | `min`/`max`/`desired` are pinned to this value.              |
+| `labels`          | `{}`                     | Merged on top of stable `isv.ncp.validation/pool` markers.   |
+| `taints`          | `[]`                     | Kubernetes effect spelling (`NoSchedule`); module translates to EKS enum. |
 
 ## Outputs
 

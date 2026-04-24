@@ -12,10 +12,10 @@
 
 This module provides two independent ``BaseValidation`` subclasses:
 
-* :class:`K8sNetworkPolicyCheck` — applies a pair of NetworkPolicies in an
+* ``K8sNetworkPolicyCheck`` - applies a pair of NetworkPolicies in an
   ephemeral namespace and verifies that ingress/egress are enforced as
   expected against both IPv4 and (when available) IPv6 pod addresses.
-* :class:`K8sDualStackNodeCheck` — inspects every node's ``InternalIP``
+* ``K8sDualStackNodeCheck`` - inspects every node's ``InternalIP``
   addresses and verifies that the cluster is dual-stack (IPv4 + IPv6) when
   configuration requires it.
 
@@ -57,7 +57,7 @@ class K8sNetworkPolicyCheck(BaseValidation):
 
     Config keys (with defaults):
         image: Agnhost image providing ``connect`` / ``netexec``
-            (default from :func:`get_k8s_network_policy_image`).
+            (default from ``get_k8s_network_policy_image``).
         probe_port: TCP port exposed by the server pods (default: 8080).
         probe_timeout_s: ``agnhost connect`` timeout per probe (default: 10).
         settle_timeout_s: Max time to wait after applying the policies before
@@ -127,7 +127,7 @@ class K8sNetworkPolicyCheck(BaseValidation):
                 for ip in server_ips:
                     if not self._probe(client, ip):
                         self.set_failed(
-                            f"Baseline connectivity broken — CNI issue? {client} could not reach server at {ip}"
+                            f"Baseline connectivity broken - CNI issue? {client} could not reach server at {ip}"
                         )
                         return
 
@@ -137,7 +137,7 @@ class K8sNetworkPolicyCheck(BaseValidation):
                 for ip in other_ips:
                     if not self._probe("allowed-client", ip):
                         self.set_failed(
-                            f"Baseline connectivity broken — CNI issue? allowed-client could not reach other-server at {ip}"
+                            f"Baseline connectivity broken - CNI issue? allowed-client could not reach other-server at {ip}"
                         )
                         return
 
@@ -335,13 +335,13 @@ class K8sDualStackNodeCheck(BaseValidation):
     Config keys (with defaults):
         require_dual_stack: One of ``True``, ``False``, or ``"auto"``. Defaults
             to the value returned by
-            :func:`isvtest.config.settings.get_k8s_require_dual_stack`
+            ``isvtest.config.settings.get_k8s_require_dual_stack``
             (``"auto"`` unless ``K8S_REQUIRE_DUAL_STACK`` is set).
 
     Decision matrix:
-        * ``True`` — any node missing either family fails the validation.
-        * ``False`` — always passes; per-node summary is still emitted.
-        * ``"auto"`` — if at least one node has both families the cluster is
+        * ``True`` - any node missing either family fails the validation.
+        * ``False`` - always passes; per-node summary is still emitted.
+        * ``"auto"`` - if at least one node has both families the cluster is
           treated as dual-stack and every node must be; if no node has both
           the check skips.
     """
@@ -466,9 +466,9 @@ def _is_ipv6(addr: str) -> bool:
 def _classify_node(node: dict[str, Any]) -> tuple[bool, bool]:
     """Return ``(has_ipv4, has_ipv6)`` based on the node's InternalIP addresses.
 
-    podCIDRs are deliberately ignored here — a node that advertises both pod CIDR
+    podCIDRs are deliberately ignored here - a node that advertises both pod CIDR
     families but only one InternalIP family is not dual-stack at the node level.
-    Use :func:`_node_podcidr_families` for cluster-level auto-detection hints.
+    Use ``_node_podcidr_families`` for cluster-level auto-detection hints.
     """
     has_v4 = False
     has_v6 = False
