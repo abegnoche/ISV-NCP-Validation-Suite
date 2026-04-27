@@ -216,7 +216,8 @@ class FakeBmcManagementEc2:
                 [
                     {
                         "Vpcs": vpcs
-                        or [
+                        if vpcs is not None
+                        else [
                             {
                                 "VpcId": "vpc-tenant",
                                 "CidrBlock": "10.0.0.0/16",

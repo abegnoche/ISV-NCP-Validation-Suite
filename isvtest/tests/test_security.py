@@ -62,6 +62,19 @@ class TestBmcManagementNetworkCheck:
         assert "management_acl_enforced" in result["error"]
         assert "ACL allows tenant CIDR" in result["error"]
 
+    def test_missing_required_key_fails(self) -> None:
+        """Fail when one of the four required contract keys is absent."""
+        tests = {
+            "dedicated_management_network": {"passed": True},
+            "restricted_management_routes": {"passed": True},
+            "tenant_network_not_management": {"passed": True},
+        }
+
+        result = BmcManagementNetworkCheck(config=_bmc_management_config(tests)).execute()
+
+        assert result["passed"] is False
+        assert "management_acl_enforced" in result["error"]
+
     def test_missing_tests_fails(self) -> None:
         """Fail when the step output does not include contract tests."""
         result = BmcManagementNetworkCheck(config={"step_output": {}}).execute()
