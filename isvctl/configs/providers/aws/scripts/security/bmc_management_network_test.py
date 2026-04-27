@@ -41,6 +41,7 @@ import argparse
 import ipaddress
 import json
 import os
+import re
 import sys
 from typing import Any
 
@@ -53,7 +54,11 @@ BMC_MANAGEMENT_CIDRS = [
     ipaddress.ip_network("169.254.0.0/16"),
     ipaddress.ip_network("198.18.0.0/15"),
 ]
-MANAGEMENT_TAG_TOKENS = ("bmc", "ipmi", "redfish", "oob", "out-of-band", "outofband")
+# Word-boundary match so identifiers like "submarine-bmcollege" don't false-match "bmc".
+_MANAGEMENT_TAG_PATTERN = re.compile(
+    r"\b(?:bmc|ipmi|redfish|oob|out-of-band|outofband)\b",
+    re.IGNORECASE,
+)
 
 
 def _collect_paginated(ec2: Any, operation_name: str, result_key: str, **kwargs: Any) -> list[dict[str, Any]]:
@@ -65,20 +70,10 @@ def _collect_paginated(ec2: Any, operation_name: str, result_key: str, **kwargs:
     return items
 
 
-def _list_vpc_ids(ec2: Any, vpc_id: str | None) -> list[str]:
-    """Return the explicit VPC ID or every VPC ID in the region."""
-    if vpc_id:
-        return [vpc_id]
-
-    vpcs = _collect_paginated(ec2, "describe_vpcs", "Vpcs")
-    return [vpc["VpcId"] for vpc in vpcs if vpc.get("VpcId")]
-
-
-def _collect_vpcs(ec2: Any, vpc_ids: list[str]) -> list[dict[str, Any]]:
-    """Collect VPC records for the selected VPC IDs."""
-    if not vpc_ids:
-        return []
-    return _collect_paginated(ec2, "describe_vpcs", "Vpcs", VpcIds=vpc_ids)
+def _list_vpcs(ec2: Any, vpc_id: str | None) -> list[dict[str, Any]]:
+    """Return the requested VPC, or every VPC in the region."""
+    kwargs: dict[str, Any] = {"VpcIds": [vpc_id]} if vpc_id else {}
+    return _collect_paginated(ec2, "describe_vpcs", "Vpcs", **kwargs)
 
 
 def _iter_vpc_cidrs(vpc: dict[str, Any]) -> list[str]:
@@ -124,9 +119,8 @@ def _is_explicit_management_cidr(cidr: str | None) -> bool:
     )
 
 
-def _check_dedicated_management_network(ec2: Any, vpc_ids: list[str]) -> dict[str, Any]:
+def _check_dedicated_management_network(vpcs: list[dict[str, Any]]) -> dict[str, Any]:
     """Verify selected tenant VPC CIDRs do not overlap management ranges."""
-    vpcs = _collect_vpcs(ec2, vpc_ids)
     cidrs_checked = 0
     for vpc in vpcs:
         for cidr in _iter_vpc_cidrs(vpc):
@@ -148,52 +142,43 @@ def _check_dedicated_management_network(ec2: Any, vpc_ids: list[str]) -> dict[st
 
 def _check_restricted_management_routes(ec2: Any, vpc_ids: list[str]) -> dict[str, Any]:
     """Verify tenant route tables have no explicit BMC management routes."""
-    route_tables_checked = 0
-    for vpc_id in vpc_ids:
-        route_tables = _collect_paginated(
-            ec2,
-            "describe_route_tables",
-            "RouteTables",
-            Filters=[{"Name": "vpc-id", "Values": [vpc_id]}],
-        )
-        route_tables_checked += len(route_tables)
-        for route_table in route_tables:
-            for route in route_table.get("Routes", []):
-                destination = route.get("DestinationCidrBlock")
-                if _is_explicit_management_cidr(destination):
-                    return {
-                        "passed": False,
-                        "vpc_id": vpc_id,
-                        "route_tables_checked": route_tables_checked,
-                        "error": f"Route table {route_table['RouteTableId']} targets BMC management CIDR {destination}",
-                    }
+    if not vpc_ids:
+        return {"passed": True, "vpcs_tested": 0, "route_tables_checked": 0, "message": "No VPCs to scan"}
+
+    route_tables = _collect_paginated(
+        ec2,
+        "describe_route_tables",
+        "RouteTables",
+        Filters=[{"Name": "vpc-id", "Values": vpc_ids}],
+    )
+    for route_table in route_tables:
+        for route in route_table.get("Routes", []):
+            destination = route.get("DestinationCidrBlock")
+            if _is_explicit_management_cidr(destination):
+                return {
+                    "passed": False,
+                    "vpc_id": route_table.get("VpcId"),
+                    "route_tables_checked": len(route_tables),
+                    "error": f"Route table {route_table['RouteTableId']} targets BMC management CIDR {destination}",
+                }
 
     return {
         "passed": True,
         "vpcs_tested": len(vpc_ids),
-        "route_tables_checked": route_tables_checked,
-        "message": f"No explicit BMC management routes across {route_tables_checked} route tables",
+        "route_tables_checked": len(route_tables),
+        "message": f"No explicit BMC management routes across {len(route_tables)} route tables",
     }
 
 
 def _has_management_tag(resource: dict[str, Any]) -> bool:
     """Return True when a resource tag identifies it as a BMC management network."""
     tag_text = " ".join(f"{tag.get('Key', '')}={tag.get('Value', '')}" for tag in resource.get("Tags", []))
-    normalized = tag_text.lower()
-    return any(token in normalized for token in MANAGEMENT_TAG_TOKENS)
+    return bool(_MANAGEMENT_TAG_PATTERN.search(tag_text))
 
 
-def _check_tenant_network_not_management(ec2: Any, vpc_ids: list[str]) -> dict[str, Any]:
-    """Verify selected tenant VPCs are not management networks."""
-    vpcs = _collect_vpcs(ec2, vpc_ids)
+def _check_tenant_network_not_management(vpcs: list[dict[str, Any]]) -> dict[str, Any]:
+    """Verify selected tenant VPCs are not tagged as BMC management networks."""
     for vpc in vpcs:
-        for cidr in _iter_vpc_cidrs(vpc):
-            if _cidr_overlaps_management(cidr):
-                return {
-                    "passed": False,
-                    "vpc_id": vpc.get("VpcId"),
-                    "error": f"Tenant VPC CIDR {cidr} overlaps reserved BMC management range",
-                }
         if _has_management_tag(vpc):
             return {
                 "passed": False,
@@ -204,37 +189,37 @@ def _check_tenant_network_not_management(ec2: Any, vpc_ids: list[str]) -> dict[s
     return {
         "passed": True,
         "vpcs_tested": len(vpcs),
-        "message": f"{len(vpcs)} tenant VPCs are not labeled or addressed as BMC management networks",
+        "message": f"{len(vpcs)} tenant VPCs are not labeled as BMC management networks",
     }
 
 
 def _check_management_acl_enforced(ec2: Any, vpc_ids: list[str]) -> dict[str, Any]:
     """Verify network ACLs do not explicitly allow BMC management CIDRs."""
-    acls_checked = 0
-    for vpc_id in vpc_ids:
-        network_acls = _collect_paginated(
-            ec2,
-            "describe_network_acls",
-            "NetworkAcls",
-            Filters=[{"Name": "vpc-id", "Values": [vpc_id]}],
-        )
-        acls_checked += len(network_acls)
-        for acl in network_acls:
-            for entry in acl.get("Entries", []):
-                cidr = entry.get("CidrBlock")
-                if entry.get("RuleAction") == "allow" and _is_explicit_management_cidr(cidr):
-                    return {
-                        "passed": False,
-                        "vpc_id": vpc_id,
-                        "network_acls_checked": acls_checked,
-                        "error": f"Network ACL {acl['NetworkAclId']} explicitly allows BMC management CIDR {cidr}",
-                    }
+    if not vpc_ids:
+        return {"passed": True, "vpcs_tested": 0, "network_acls_checked": 0, "message": "No VPCs to scan"}
+
+    network_acls = _collect_paginated(
+        ec2,
+        "describe_network_acls",
+        "NetworkAcls",
+        Filters=[{"Name": "vpc-id", "Values": vpc_ids}],
+    )
+    for acl in network_acls:
+        for entry in acl.get("Entries", []):
+            cidr = entry.get("CidrBlock")
+            if entry.get("RuleAction") == "allow" and _is_explicit_management_cidr(cidr):
+                return {
+                    "passed": False,
+                    "vpc_id": acl.get("VpcId"),
+                    "network_acls_checked": len(network_acls),
+                    "error": f"Network ACL {acl['NetworkAclId']} explicitly allows BMC management CIDR {cidr}",
+                }
 
     return {
         "passed": True,
         "vpcs_tested": len(vpc_ids),
-        "network_acls_checked": acls_checked,
-        "message": f"No explicit BMC management ACL allows across {acls_checked} network ACLs",
+        "network_acls_checked": len(network_acls),
+        "message": f"No explicit BMC management ACL allows across {len(network_acls)} network ACLs",
     }
 
 
@@ -248,18 +233,18 @@ def main() -> int:
 
     ec2 = boto3.client("ec2", region_name=args.region)
 
+    vpcs = _list_vpcs(ec2, args.vpc_id)
+    vpc_ids = [vpc["VpcId"] for vpc in vpcs if vpc.get("VpcId")]
+
     result: dict[str, Any] = {
         "success": False,
         "platform": "security",
         "test_name": "bmc_management_network",
-        "management_networks_checked": 0,
+        "management_networks_checked": len(vpc_ids),
+        "vpcs_tested": len(vpc_ids),
+        "vpc_ids_tested": vpc_ids,
         "tests": {},
     }
-
-    vpc_ids = _list_vpc_ids(ec2, args.vpc_id)
-    result["vpcs_tested"] = len(vpc_ids)
-    result["vpc_ids_tested"] = vpc_ids
-    result["management_networks_checked"] = len(vpc_ids)
 
     if not vpc_ids:
         result["tests"] = {
@@ -272,9 +257,9 @@ def main() -> int:
             "management_acl_enforced": {"passed": False, "error": "Validation not executed"},
         }
     else:
-        result["tests"]["dedicated_management_network"] = _check_dedicated_management_network(ec2, vpc_ids)
+        result["tests"]["dedicated_management_network"] = _check_dedicated_management_network(vpcs)
         result["tests"]["restricted_management_routes"] = _check_restricted_management_routes(ec2, vpc_ids)
-        result["tests"]["tenant_network_not_management"] = _check_tenant_network_not_management(ec2, vpc_ids)
+        result["tests"]["tenant_network_not_management"] = _check_tenant_network_not_management(vpcs)
         result["tests"]["management_acl_enforced"] = _check_management_acl_enforced(ec2, vpc_ids)
 
     result["success"] = all(test.get("passed") for test in result["tests"].values())

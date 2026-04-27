@@ -284,20 +284,53 @@ def test_bmc_main_scans_non_default_vpcs_when_no_vpc_id(
 def test_bmc_management_network_detects_tenant_cidr_overlap() -> None:
     """SEC12-01 fails when tenant VPC CIDRs overlap reserved management ranges."""
     module = _load_security_script("bmc_management_network_test.py")
-    ec2 = FakeBmcManagementEc2(
-        vpcs=[
-            {
-                "VpcId": "vpc-mgmt-overlap",
-                "CidrBlock": "198.18.1.0/24",
-                "CidrBlockAssociationSet": [{"CidrBlock": "198.18.1.0/24"}],
-            }
-        ]
-    )
+    vpcs = [
+        {
+            "VpcId": "vpc-mgmt-overlap",
+            "CidrBlock": "198.18.1.0/24",
+            "CidrBlockAssociationSet": [{"CidrBlock": "198.18.1.0/24"}],
+        }
+    ]
 
-    result = module._check_tenant_network_not_management(ec2, ["vpc-mgmt-overlap"])
+    result = module._check_dedicated_management_network(vpcs)
 
     assert result["passed"] is False
     assert "198.18.1.0/24" in result["error"]
+
+
+def test_bmc_management_network_detects_management_tag() -> None:
+    """SEC12-01 fails when a tenant VPC is tagged as a BMC management network."""
+    module = _load_security_script("bmc_management_network_test.py")
+    vpcs = [
+        {
+            "VpcId": "vpc-mgmt-tag",
+            "CidrBlock": "10.0.0.0/16",
+            "CidrBlockAssociationSet": [{"CidrBlock": "10.0.0.0/16"}],
+            "Tags": [{"Key": "Role", "Value": "bmc-network"}],
+        }
+    ]
+
+    result = module._check_tenant_network_not_management(vpcs)
+
+    assert result["passed"] is False
+    assert "vpc-mgmt-tag" in result["error"]
+
+
+def test_bmc_management_tag_avoids_substring_false_positive() -> None:
+    """Tag matcher uses word boundaries so unrelated identifiers don't false-match."""
+    module = _load_security_script("bmc_management_network_test.py")
+    vpcs = [
+        {
+            "VpcId": "vpc-tenant",
+            "CidrBlock": "10.0.0.0/16",
+            "CidrBlockAssociationSet": [{"CidrBlock": "10.0.0.0/16"}],
+            "Tags": [{"Key": "Name", "Value": "submarine-bmcollege"}],
+        }
+    ]
+
+    result = module._check_tenant_network_not_management(vpcs)
+
+    assert result["passed"] is True
 
 
 def test_bmc_management_network_detects_explicit_management_routes() -> None:
