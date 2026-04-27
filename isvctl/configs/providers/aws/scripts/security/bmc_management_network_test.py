@@ -1,0 +1,277 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+
+# NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+# property and proprietary rights in and to this material, related
+# documentation and any modifications thereto. Any use, reproduction,
+# disclosure or distribution of this material and related documentation
+# without an express license agreement from NVIDIA CORPORATION or
+# its affiliates is strictly prohibited.
+
+"""Verify BMC management is on a dedicated, restricted network (AWS reference).
+
+In AWS, the BMC/hypervisor management plane is provider-owned and is not
+attached to customer VPCs. This reference check validates the customer-visible
+side of that boundary:
+
+  1. Tenant VPC CIDRs do not overlap reserved BMC/management ranges.
+  2. Tenant route tables do not explicitly target management CIDRs.
+  3. Tenant VPCs are not tagged as BMC/IPMI/Redfish management networks.
+  4. Network ACLs do not explicitly allow management CIDRs.
+
+Usage:
+    python bmc_management_network_test.py --region us-west-2
+
+Output JSON:
+  {
+    "success": true,
+    "platform": "security",
+    "test_name": "bmc_management_network",
+    "tests": {
+      "dedicated_management_network": {"passed": true},
+      "restricted_management_routes": {"passed": true},
+      "tenant_network_not_management": {"passed": true},
+      "management_acl_enforced": {"passed": true}
+    }
+  }
+"""
+
+import argparse
+import ipaddress
+import json
+import os
+import sys
+from typing import Any
+
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent.parent))
+
+import boto3
+from common.errors import handle_aws_errors
+
+BMC_MANAGEMENT_CIDRS = [
+    ipaddress.ip_network("169.254.0.0/16"),
+    ipaddress.ip_network("198.18.0.0/15"),
+]
+BMC_MANAGEMENT_CIDR_STRS = {str(cidr) for cidr in BMC_MANAGEMENT_CIDRS}
+MANAGEMENT_TAG_TOKENS = ("bmc", "ipmi", "redfish", "oob", "out-of-band", "outofband")
+
+
+def _collect_paginated(ec2: Any, operation_name: str, result_key: str, **kwargs: Any) -> list[dict[str, Any]]:
+    """Collect all items for a paginated EC2 describe operation."""
+    paginator = ec2.get_paginator(operation_name)
+    items: list[dict[str, Any]] = []
+    for page in paginator.paginate(**kwargs):
+        items.extend(page.get(result_key, []))
+    return items
+
+
+def _list_vpc_ids(ec2: Any, vpc_id: str | None) -> list[str]:
+    """Return the explicit VPC ID or every VPC ID in the region."""
+    if vpc_id:
+        return [vpc_id]
+
+    vpcs = _collect_paginated(ec2, "describe_vpcs", "Vpcs")
+    return [vpc["VpcId"] for vpc in vpcs if vpc.get("VpcId")]
+
+
+def _collect_vpcs(ec2: Any, vpc_ids: list[str]) -> list[dict[str, Any]]:
+    """Collect VPC records for the selected VPC IDs."""
+    if not vpc_ids:
+        return []
+    return _collect_paginated(ec2, "describe_vpcs", "Vpcs", VpcIds=vpc_ids)
+
+
+def _iter_vpc_cidrs(vpc: dict[str, Any]) -> list[str]:
+    """Return associated IPv4 CIDR blocks for a VPC."""
+    cidrs: list[str] = []
+    for association in vpc.get("CidrBlockAssociationSet", []):
+        state = association.get("CidrBlockState", {}).get("State", "associated")
+        cidr = association.get("CidrBlock")
+        if cidr and state != "disassociated":
+            cidrs.append(cidr)
+    fallback_cidr = vpc.get("CidrBlock")
+    if fallback_cidr and fallback_cidr not in cidrs:
+        cidrs.append(fallback_cidr)
+    return cidrs
+
+
+def _cidr_overlaps_management(cidr: str) -> bool:
+    """Return True when a CIDR overlaps a reserved BMC management range."""
+    try:
+        network = ipaddress.ip_network(cidr, strict=False)
+    except ValueError:
+        return False
+    return any(network.overlaps(management_cidr) for management_cidr in BMC_MANAGEMENT_CIDRS)
+
+
+def _is_explicit_management_cidr(cidr: str | None) -> bool:
+    """Return True for literal management CIDR targets.
+
+    Default internet routes such as 0.0.0.0/0 are intentionally not treated
+    as management routes here; this check catches explicit BMC network wiring.
+    """
+    return cidr in BMC_MANAGEMENT_CIDR_STRS
+
+
+def _check_dedicated_management_network(ec2: Any, vpc_ids: list[str]) -> dict[str, Any]:
+    """Verify selected tenant VPC CIDRs do not overlap management ranges."""
+    vpcs = _collect_vpcs(ec2, vpc_ids)
+    cidrs_checked = 0
+    for vpc in vpcs:
+        for cidr in _iter_vpc_cidrs(vpc):
+            cidrs_checked += 1
+            if _cidr_overlaps_management(cidr):
+                return {
+                    "passed": False,
+                    "vpc_id": vpc.get("VpcId"),
+                    "error": f"Tenant VPC CIDR {cidr} overlaps reserved BMC management range",
+                }
+
+    return {
+        "passed": True,
+        "vpcs_tested": len(vpcs),
+        "cidrs_checked": cidrs_checked,
+        "message": f"No tenant VPC CIDRs overlap BMC management ranges across {len(vpcs)} VPCs",
+    }
+
+
+def _check_restricted_management_routes(ec2: Any, vpc_ids: list[str]) -> dict[str, Any]:
+    """Verify tenant route tables have no explicit BMC management routes."""
+    route_tables_checked = 0
+    for vpc_id in vpc_ids:
+        route_tables = _collect_paginated(
+            ec2,
+            "describe_route_tables",
+            "RouteTables",
+            Filters=[{"Name": "vpc-id", "Values": [vpc_id]}],
+        )
+        route_tables_checked += len(route_tables)
+        for route_table in route_tables:
+            for route in route_table.get("Routes", []):
+                destination = route.get("DestinationCidrBlock")
+                if _is_explicit_management_cidr(destination):
+                    return {
+                        "passed": False,
+                        "vpc_id": vpc_id,
+                        "route_tables_checked": route_tables_checked,
+                        "error": f"Route table {route_table['RouteTableId']} targets BMC management CIDR {destination}",
+                    }
+
+    return {
+        "passed": True,
+        "vpcs_tested": len(vpc_ids),
+        "route_tables_checked": route_tables_checked,
+        "message": f"No explicit BMC management routes across {route_tables_checked} route tables",
+    }
+
+
+def _has_management_tag(resource: dict[str, Any]) -> bool:
+    """Return True when a resource tag identifies it as a BMC management network."""
+    tag_text = " ".join(f"{tag.get('Key', '')}={tag.get('Value', '')}" for tag in resource.get("Tags", []))
+    normalized = tag_text.lower()
+    return any(token in normalized for token in MANAGEMENT_TAG_TOKENS)
+
+
+def _check_tenant_network_not_management(ec2: Any, vpc_ids: list[str]) -> dict[str, Any]:
+    """Verify selected tenant VPCs are not management networks."""
+    vpcs = _collect_vpcs(ec2, vpc_ids)
+    for vpc in vpcs:
+        for cidr in _iter_vpc_cidrs(vpc):
+            if _cidr_overlaps_management(cidr):
+                return {
+                    "passed": False,
+                    "vpc_id": vpc.get("VpcId"),
+                    "error": f"Tenant VPC CIDR {cidr} overlaps reserved BMC management range",
+                }
+        if _has_management_tag(vpc):
+            return {
+                "passed": False,
+                "vpc_id": vpc.get("VpcId"),
+                "error": f"Tenant VPC {vpc.get('VpcId')} is tagged as a BMC management network",
+            }
+
+    return {
+        "passed": True,
+        "vpcs_tested": len(vpcs),
+        "message": f"{len(vpcs)} tenant VPCs are not labeled or addressed as BMC management networks",
+    }
+
+
+def _check_management_acl_enforced(ec2: Any, vpc_ids: list[str]) -> dict[str, Any]:
+    """Verify network ACLs do not explicitly allow BMC management CIDRs."""
+    acls_checked = 0
+    for vpc_id in vpc_ids:
+        network_acls = _collect_paginated(
+            ec2,
+            "describe_network_acls",
+            "NetworkAcls",
+            Filters=[{"Name": "vpc-id", "Values": [vpc_id]}],
+        )
+        acls_checked += len(network_acls)
+        for acl in network_acls:
+            for entry in acl.get("Entries", []):
+                cidr = entry.get("CidrBlock")
+                if entry.get("RuleAction") == "allow" and _is_explicit_management_cidr(cidr):
+                    return {
+                        "passed": False,
+                        "vpc_id": vpc_id,
+                        "network_acls_checked": acls_checked,
+                        "error": f"Network ACL {acl['NetworkAclId']} explicitly allows BMC management CIDR {cidr}",
+                    }
+
+    return {
+        "passed": True,
+        "vpcs_tested": len(vpc_ids),
+        "network_acls_checked": acls_checked,
+        "message": f"No explicit BMC management ACL allows across {acls_checked} network ACLs",
+    }
+
+
+@handle_aws_errors
+def main() -> int:
+    """Run BMC management-network checks and emit JSON result."""
+    parser = argparse.ArgumentParser(description="BMC management network test")
+    parser.add_argument("--region", default=os.environ.get("AWS_REGION", "us-west-2"))
+    parser.add_argument("--vpc-id", help="Existing VPC to test (optional; scans all VPCs when omitted)")
+    args = parser.parse_args()
+
+    ec2 = boto3.client("ec2", region_name=args.region)
+
+    result: dict[str, Any] = {
+        "success": False,
+        "platform": "security",
+        "test_name": "bmc_management_network",
+        "management_networks_checked": 0,
+        "tests": {},
+    }
+
+    vpc_ids = _list_vpc_ids(ec2, args.vpc_id)
+    result["vpcs_tested"] = len(vpc_ids)
+    result["vpc_ids_tested"] = vpc_ids
+    result["management_networks_checked"] = len(vpc_ids)
+
+    if not vpc_ids:
+        result["tests"] = {
+            "dedicated_management_network": {
+                "passed": False,
+                "error": "No VPCs found to validate; provide --vpc-id",
+            },
+            "restricted_management_routes": {"passed": False, "error": "Validation not executed"},
+            "tenant_network_not_management": {"passed": False, "error": "Validation not executed"},
+            "management_acl_enforced": {"passed": False, "error": "Validation not executed"},
+        }
+    else:
+        result["tests"]["dedicated_management_network"] = _check_dedicated_management_network(ec2, vpc_ids)
+        result["tests"]["restricted_management_routes"] = _check_restricted_management_routes(ec2, vpc_ids)
+        result["tests"]["tenant_network_not_management"] = _check_tenant_network_not_management(ec2, vpc_ids)
+        result["tests"]["management_acl_enforced"] = _check_management_acl_enforced(ec2, vpc_ids)
+
+    result["success"] = all(test.get("passed") for test in result["tests"].values())
+
+    print(json.dumps(result, indent=2))
+    return 0 if result["success"] else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
