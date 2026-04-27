@@ -317,8 +317,26 @@ def test_bmc_management_network_detects_management_tag() -> None:
     assert "vpc-mgmt-tag" in result["error"]
 
 
+def test_bmc_management_tag_matches_underscore_delimited() -> None:
+    """Tag matcher catches underscore-delimited management names like bmc_network."""
+    module = _load_security_script("bmc_management_network_test.py")
+    vpcs = [
+        {
+            "VpcId": "vpc-underscore",
+            "CidrBlock": "10.0.0.0/16",
+            "CidrBlockAssociationSet": [{"CidrBlock": "10.0.0.0/16"}],
+            "Tags": [{"Key": "Name", "Value": "bmc_network"}],
+        }
+    ]
+
+    result = module._check_tenant_network_not_management(vpcs)
+
+    assert result["passed"] is False
+    assert "vpc-underscore" in result["error"]
+
+
 def test_bmc_management_tag_avoids_substring_false_positive() -> None:
-    """Tag matcher uses word boundaries so unrelated identifiers don't false-match."""
+    """Tag matcher rejects unrelated identifiers that contain management substrings."""
     module = _load_security_script("bmc_management_network_test.py")
     vpcs = [
         {

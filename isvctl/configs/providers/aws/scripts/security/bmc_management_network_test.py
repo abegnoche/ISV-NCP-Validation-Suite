@@ -54,9 +54,8 @@ BMC_MANAGEMENT_CIDRS = [
     ipaddress.ip_network("169.254.0.0/16"),
     ipaddress.ip_network("198.18.0.0/15"),
 ]
-# Word-boundary match so identifiers like "submarine-bmcollege" don't false-match "bmc".
 _MANAGEMENT_TAG_PATTERN = re.compile(
-    r"\b(?:bmc|ipmi|redfish|oob|out-of-band|outofband)\b",
+    r"(?<![A-Za-z0-9])(?:bmc|ipmi|redfish|oob|out[-_]?of[-_]?band)(?![A-Za-z0-9])",
     re.IGNORECASE,
 )
 
