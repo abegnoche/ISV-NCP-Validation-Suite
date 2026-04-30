@@ -477,14 +477,16 @@ def test_oidc_user_auth_check_requires_endpoint_probe_count() -> None:
 
 
 def test_oidc_user_auth_check_skips_when_step_marks_skipped() -> None:
-    """OidcUserAuthCheck pytest.skips when the step output flags itself as skipped."""
+    """OidcUserAuthCheck pytest.skips through both run() and execute() when flagged."""
     step_output = {
         "success": True,
         "skipped": True,
         "skip_reason": "OIDC validation not configured; missing --issuer-url or OIDC_ISSUER_URL",
         "tests": {},
     }
-    check = OidcUserAuthCheck(config={"step_output": step_output})
 
     with pytest.raises(pytest.skip.Exception, match="OIDC validation not configured"):
-        check.run()
+        OidcUserAuthCheck(config={"step_output": step_output}).run()
+
+    with pytest.raises(pytest.skip.Exception, match="OIDC validation not configured"):
+        OidcUserAuthCheck(config={"step_output": step_output}).execute()

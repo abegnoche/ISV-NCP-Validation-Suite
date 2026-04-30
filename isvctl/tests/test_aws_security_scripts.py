@@ -1845,6 +1845,40 @@ def test_oidc_main_emits_skip_with_inline_empty_config_args(
     assert payload["tests"] == {}
 
 
+def test_oidc_main_skip_resets_endpoints_tested_when_only_target_url_set(
+    oidc_module: ModuleType,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A partially-configured run still reports endpoints_tested=0 on skip."""
+    for env_var in (
+        "OIDC_ISSUER_URL",
+        "OIDC_AUDIENCE",
+        "OIDC_TARGET_URL",
+        "OIDC_VALID_TOKEN",
+    ):
+        monkeypatch.delenv(env_var, raising=False)
+    monkeypatch.setattr(
+        oidc_module.sys,
+        "argv",
+        [
+            "oidc_user_auth_test.py",
+            "--region",
+            "us-west-2",
+            "--target-url",
+            "https://api.example/protected",
+        ],
+    )
+
+    exit_code = oidc_module.main()
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert payload["skipped"] is True
+    assert payload["target_url"] == "https://api.example/protected"
+    assert payload["endpoints_tested"] == 0
+
+
 def test_oidc_main_fails_when_probes_fail(
     oidc_module: ModuleType,
     monkeypatch: pytest.MonkeyPatch,

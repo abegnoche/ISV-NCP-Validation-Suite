@@ -768,6 +768,7 @@ def main() -> int:
             result["success"] = True
             result["skipped"] = True
             result["skip_reason"] = "OIDC validation not configured; missing " + ", ".join(missing)
+            result["endpoints_tested"] = 0
             print(json.dumps(result, indent=2))
             return 0
         else:
